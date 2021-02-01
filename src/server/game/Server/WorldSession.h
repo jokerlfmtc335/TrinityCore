@@ -337,7 +337,9 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-    protected:
+    // lfm CharacterCreateInfo set to public
+    //protected:
+public:
         /// User specified variables
         std::string Name;
         uint8 Race       = 0;
@@ -399,6 +401,9 @@ class TC_GAME_API WorldSession
     public:
         WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter);
         ~WorldSession();
+
+        // lfm robot
+        bool isRobotSession;
 
         bool PlayerLoading() const { return m_playerLoading; }
         bool PlayerLogout() const { return m_playerLogout; }

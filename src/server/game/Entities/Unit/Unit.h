@@ -524,6 +524,9 @@ struct CalcDamageInfo
     uint32 ProcVictim;
     uint32 CleanDamage;          // Used only for rage calculation
     MeleeHitOutcome HitOutCome;  /// @todo remove this field (need use TargetState)
+
+    // lfm melee delay
+    int delay = 0;
 };
 
 // Spell damage info structure based on structure sending in SMSG_SPELLNONMELEEDAMAGELOG opcode
@@ -733,6 +736,11 @@ struct PositionUpdateInfo
 
 class TC_GAME_API Unit : public WorldObject
 {
+    // lfm melee damage delay
+public:
+    CalcDamageInfo cdiBase;
+    CalcDamageInfo cdiOff;
+
     public:
         typedef std::set<Unit*> AttackerSet;
         typedef std::set<Unit*> ControlList;

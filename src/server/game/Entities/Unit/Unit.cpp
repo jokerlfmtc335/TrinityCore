@@ -472,6 +472,30 @@ void Unit::Update(uint32 p_time)
     if (!GetAI() && (GetTypeId() != TYPEID_PLAYER || (IsCharmed() && GetCharmerGUID().IsCreature())))
         UpdateCharmAI();
     RefreshAI();
+
+    // lfm melee delay
+    if (cdiBase.delay > 0)
+    {
+        cdiBase.delay -= p_time;
+        if (cdiBase.delay <= 0)
+        {
+            DealMeleeDamage(&cdiBase, true);
+            DamageInfo dmgInfo(cdiBase);
+            Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+            cdiBase.delay = 0;
+        }
+    }
+    if (cdiOff.delay > 0)
+    {
+        cdiOff.delay -= p_time;
+        if (cdiOff.delay <= 0)
+        {
+            DealMeleeDamage(&cdiOff, true);
+            DamageInfo dmgInfo(cdiOff);
+            Unit::ProcSkillsAndAuras(cdiOff.Attacker, cdiOff.Target, cdiOff.ProcAttacker, cdiOff.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+            cdiOff.delay = 0;
+        }
+    }
 }
 
 bool Unit::haveOffhandWeapon() const
@@ -2076,17 +2100,51 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
             Unit::DealDamageMods(victim, damageInfo.Damages[i].Damage, &damageInfo.Damages[i].Absorb);
         SendAttackStateUpdate(&damageInfo);
 
-        DealMeleeDamage(&damageInfo, true);
-
-        DamageInfo dmgInfo(damageInfo);
-        Unit::ProcSkillsAndAuras(damageInfo.Attacker, damageInfo.Target, damageInfo.ProcAttacker, damageInfo.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
-
-        if (GetTypeId() == TYPEID_PLAYER)
-            TC_LOG_DEBUG("entities.unit", "AttackerStateUpdate: (Player) %s attacked %s for %u dmg, absorbed %u, blocked %u, resisted %u.",
-                GetGUID().ToString().c_str(), victim->GetGUID().ToString().c_str(), dmgInfo.GetDamage(), dmgInfo.GetAbsorb(), dmgInfo.GetBlock(), dmgInfo.GetResist());
+        // lfm melee delay 
+        int delay = 500;
+        if (GetTypeId() == TypeID::TYPEID_PLAYER)
+        {
+            if (Player* attackerPlayer = ToPlayer())
+            {
+                if (Item* weapon = attackerPlayer->GetWeaponForAttack(damageInfo.AttackType))
+                {
+                    if (const ItemTemplate* it = weapon->GetTemplate())
+                    {
+                        if (it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_EXOTIC2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_POLEARM || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SPEAR || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF|| it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD2)
+                        {
+                            delay = 700;
+                        }
+                    }
+                }
+            }
+        }
         else
-            TC_LOG_DEBUG("entities.unit", "AttackerStateUpdate: (NPC)    %s attacked %s for %u dmg, absorbed %u, blocked %u, resisted %u.",
-                GetGUID().ToString().c_str(), victim->GetGUID().ToString().c_str(), dmgInfo.GetDamage(), dmgInfo.GetAbsorb(), dmgInfo.GetBlock(), dmgInfo.GetResist());
+        {
+
+        }
+        if (damageInfo.AttackType == WeaponAttackType::BASE_ATTACK)
+        {
+            cdiBase = damageInfo;
+            cdiBase.delay = delay;
+        }
+        else if (damageInfo.AttackType == WeaponAttackType::OFF_ATTACK)
+        {
+            cdiOff = damageInfo;
+            cdiOff.delay = delay;
+        }
+        //DealMeleeDamage(&damageInfo, true);
+        //DamageInfo dmgInfo(damageInfo);
+        //Unit::ProcSkillsAndAuras(damageInfo.Attacker, damageInfo.Target, damageInfo.ProcAttacker, damageInfo.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+        //if (GetTypeId() == TYPEID_PLAYER)
+        //{
+        //    TC_LOG_DEBUG("entities.unit", "AttackerStateUpdate: (Player) %s attacked %s for %u dmg, absorbed %u, blocked %u, resisted %u.",
+        //        GetGUID().ToString().c_str(), victim->GetGUID().ToString().c_str(), dmgInfo.GetDamage(), dmgInfo.GetAbsorb(), dmgInfo.GetBlock(), dmgInfo.GetResist());
+        //}
+        //else
+        //{
+        //    TC_LOG_DEBUG("entities.unit", "AttackerStateUpdate: (NPC)    %s attacked %s for %u dmg, absorbed %u, blocked %u, resisted %u.",
+        //        GetGUID().ToString().c_str(), victim->GetGUID().ToString().c_str(), dmgInfo.GetDamage(), dmgInfo.GetAbsorb(), dmgInfo.GetBlock(), dmgInfo.GetResist());
+        //}
     }
 }
 

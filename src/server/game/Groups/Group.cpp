@@ -2679,3 +2679,38 @@ void Group::StopLeaderOfflineTimer()
 {
     m_isLeaderOffline = false;
 }
+
+// lfm group target icon 
+std::unordered_map<int, ObjectGuid> Group::GetGroupTargetIconMap()
+{
+    std::unordered_map<int, ObjectGuid> result;
+    result.clear();
+    for (int i = 0; i < TARGETICONCOUNT; ++i)
+    {
+        result[i] = m_targetIcons[i];
+    }
+    return result;
+}
+
+int  Group::GetTargetIconByOG(ObjectGuid pmOG)
+{
+    int result = -1;
+    for (int i = 0; i < TARGETICONCOUNT; ++i)
+    {
+        if (pmOG == m_targetIcons[i])
+        {
+            result = i;
+        }
+    }
+    return result;
+}
+
+ObjectGuid  Group::GetOGByTargetIcon(int pmTargetIcon)
+{
+    ObjectGuid result;
+    if (pmTargetIcon >= 0 && pmTargetIcon <= 7)
+    {
+        result = m_targetIcons[pmTargetIcon];
+    }
+    return result;
+}

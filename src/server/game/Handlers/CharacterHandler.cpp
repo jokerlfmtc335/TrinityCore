@@ -713,11 +713,15 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 
     recvData >> playerGuid;
 
-    if (!IsLegitCharacterForAccount(playerGuid))
+    // lfm robot is legit to login 
+    if (!isRobotSession)
     {
-        TC_LOG_ERROR("network", "Account (%u) can't login with that character (%s).", GetAccountId(), playerGuid.ToString().c_str());
-        KickPlayer("WorldSession::HandlePlayerLoginOpcode Trying to login with a character of another account");
-        return;
+        if (!IsLegitCharacterForAccount(playerGuid))
+        {
+            TC_LOG_ERROR("network", "Account (%u) can't login with that character (%s).", GetAccountId(), playerGuid.ToString().c_str());
+            KickPlayer("WorldSession::HandlePlayerLoginOpcode Trying to login with a character of another account");
+            return;
+        }
     }
 
     std::shared_ptr<LoginQueryHolder> holder = std::make_shared<LoginQueryHolder>(GetAccountId(), playerGuid);
@@ -738,7 +742,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     ObjectGuid playerGuid = holder.GetGuid();
 
     Player* pCurrChar = new Player(this);
-     // for send server info and strings (config)
+    // for send server info and strings (config)
     ChatHandler chH = ChatHandler(pCurrChar->GetSession());
 
     // "GetAccountId() == db stored account id" checked in LoadFromDB (prevent login not own character using cheating tools)
@@ -799,7 +803,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
         }
     }
 
-    WorldPacket data(SMSG_LEARNED_DANCE_MOVES, 4+4);
+    WorldPacket data(SMSG_LEARNED_DANCE_MOVES, 4 + 4);
     data << uint32(0);
     data << uint32(0);
     SendPacket(&data);
@@ -920,15 +924,15 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
         if (sWorld->getBoolConfig(CONFIG_START_ALL_REP))
         {
             ReputationMgr& repMgr = pCurrChar->GetReputationMgr();
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 942), 42999, false); // Cenarion Expedition
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 935), 42999, false); // The Sha'tar
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 936), 42999, false); // Shattrath City
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(942), 42999, false); // Cenarion Expedition
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(935), 42999, false); // The Sha'tar
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(936), 42999, false); // Shattrath City
             repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1011), 42999, false); // Lower City
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 970), 42999, false); // Sporeggar
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 967), 42999, false); // The Violet Eye
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 989), 42999, false); // Keepers of Time
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 932), 42999, false); // The Aldor
-            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 934), 42999, false); // The Scryers
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(970), 42999, false); // Sporeggar
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(967), 42999, false); // The Violet Eye
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(989), 42999, false); // Keepers of Time
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(932), 42999, false); // The Aldor
+            repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(934), 42999, false); // The Scryers
             repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1038), 42999, false); // Ogri'la
             repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1077), 42999, false); // Shattered Sun Offensive
             repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1106), 42999, false); // Argent Crusade
@@ -944,38 +948,38 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
             // Factions depending on team, like cities and some more stuff
             switch (pCurrChar->GetTeam())
             {
-                case ALLIANCE:
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  72), 42999, false); // Stormwind
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  47), 42999, false); // Ironforge
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  69), 42999, false); // Darnassus
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 930), 42999, false); // Exodar
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 730), 42999, false); // Stormpike Guard
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 978), 42999, false); // Kurenai
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  54), 42999, false); // Gnomeregan Exiles
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 946), 42999, false); // Honor Hold
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1037), 42999, false); // Alliance Vanguard
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1068), 42999, false); // Explorers' League
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1126), 42999, false); // The Frostborn
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1094), 42999, false); // The Silver Covenant
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1050), 42999, false); // Valiance Expedition
-                    break;
-                case HORDE:
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  76), 42999, false); // Orgrimmar
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  68), 42999, false); // Undercity
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(  81), 42999, false); // Thunder Bluff
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 911), 42999, false); // Silvermoon City
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 729), 42999, false); // Frostwolf Clan
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 941), 42999, false); // The Mag'har
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 530), 42999, false); // Darkspear Trolls
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry( 947), 42999, false); // Thrallmar
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1052), 42999, false); // Horde Expedition
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1067), 42999, false); // The Hand of Vengeance
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1124), 42999, false); // The Sunreavers
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1064), 42999, false); // The Taunka
-                    repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1085), 42999, false); // Warsong Offensive
-                    break;
-                default:
-                    break;
+            case ALLIANCE:
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(72), 42999, false); // Stormwind
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(47), 42999, false); // Ironforge
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(69), 42999, false); // Darnassus
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(930), 42999, false); // Exodar
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(730), 42999, false); // Stormpike Guard
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(978), 42999, false); // Kurenai
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(54), 42999, false); // Gnomeregan Exiles
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(946), 42999, false); // Honor Hold
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1037), 42999, false); // Alliance Vanguard
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1068), 42999, false); // Explorers' League
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1126), 42999, false); // The Frostborn
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1094), 42999, false); // The Silver Covenant
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1050), 42999, false); // Valiance Expedition
+                break;
+            case HORDE:
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(76), 42999, false); // Orgrimmar
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(68), 42999, false); // Undercity
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(81), 42999, false); // Thunder Bluff
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(911), 42999, false); // Silvermoon City
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(729), 42999, false); // Frostwolf Clan
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(941), 42999, false); // The Mag'har
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(530), 42999, false); // Darkspear Trolls
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(947), 42999, false); // Thrallmar
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1052), 42999, false); // Horde Expedition
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1067), 42999, false); // The Hand of Vengeance
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1124), 42999, false); // The Sunreavers
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1064), 42999, false); // The Taunka
+                repMgr.SetOneFactionReputation(sFactionStore.LookupEntry(1085), 42999, false); // Warsong Offensive
+                break;
+            default:
+                break;
             }
             repMgr.SendState(nullptr);
         }
@@ -1014,6 +1018,19 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     sScriptMgr->OnPlayerLogin(pCurrChar, firstLogin);
 
     TC_METRIC_EVENT("player_events", "Login", pCurrChar->GetName());
+
+    // lfm robot logged in 
+    pCurrChar->robotAI = new AI_Base(pCurrChar);
+    if (isRobotSession)
+    {
+        std::ostringstream serverStream;
+        serverStream << "robot " << pCurrChar->GetName() << "logged in";
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, serverStream.str());
+        if (!sCharacterCache->HasCharacterCacheEntry(pCurrChar->GetGUID()))
+        {
+            sCharacterCache->AddCharacterCacheEntry(pCurrChar->GetGUID(), GetAccountId(), pCurrChar->GetName(), pCurrChar->GetGender(), pCurrChar->GetRace(), pCurrChar->GetClass(), pCurrChar->GetLevel());
+        }
+    }
 }
 
 void WorldSession::SendFeatureSystemStatus()

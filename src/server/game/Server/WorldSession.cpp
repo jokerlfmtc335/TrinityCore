@@ -147,6 +147,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
         LoginDatabase.PExecute("UPDATE account SET online = 1 WHERE id = %u;", GetAccountId());     // One-time query
     }
 
+    isRobotSession = false;
 }
 
 /// WorldSession destructor
@@ -201,6 +202,14 @@ ObjectGuid::LowType WorldSession::GetGUIDLow() const
 void WorldSession::SendPacket(WorldPacket const* packet)
 {
     ASSERT(packet->GetOpcode() != NULL_OPCODE);
+
+    // EJ robot    
+    if (isRobotSession)
+    {
+        WorldPacket eachCopy(*packet);
+        sRobotManager->HandlePacket(this, eachCopy);
+        return;
+    }
 
     if (!m_Socket)
         return;
@@ -272,6 +281,12 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    // lfm robot 
+    if (isRobotSession)
+    {
+        ProcessQueryCallbacks();
+        return true;
+    }
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)

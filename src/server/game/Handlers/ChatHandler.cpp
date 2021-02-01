@@ -44,6 +44,9 @@
 #include "WorldPacket.h"
 #include <algorithm>
 
+ // lfm robot 
+#include "RobotManager.h"
+
 inline bool isNasty(uint8 c)
 {
     if (c == '\t')
@@ -292,6 +295,12 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             }
 
             sender->Say(msg, Language(lang));
+
+            // lfm robot
+            if (!isRobotSession)
+            {
+                sRobotManager->HandlePlayerSay(GetPlayer(), msg);
+            }
             break;
         }
         case CHAT_MSG_EMOTE:
@@ -368,6 +377,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 sender->AddWhisperWhiteList(receiver->GetGUID());
 
             GetPlayer()->Whisper(msg, Language(lang), receiver);
+
+            // lfm robot 
+            sRobotManager->HandleChatCommand(GetPlayer(), msg, receiver);
             break;
         }
         case CHAT_MSG_PARTY:
@@ -390,6 +402,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             WorldPacket data;
             ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
             group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+
+            // lfm robot 
+            sRobotManager->HandleChatCommand(GetPlayer(), msg);
             break;
         }
         case CHAT_MSG_GUILD:
@@ -452,6 +467,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             WorldPacket data;
             ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID_LEADER, Language(lang), sender, nullptr, msg);
             group->BroadcastPacket(&data, false);
+
+            // lfm robot 
+            sRobotManager->HandleChatCommand(GetPlayer(), msg);
             break;
         }
         case CHAT_MSG_RAID_WARNING:

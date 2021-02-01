@@ -91,6 +91,10 @@
 
 #include <boost/asio/ip/address.hpp>
 
+// lfm robot 
+#include "RobotConfig.h"
+#include "RobotManager.h"
+
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -1759,7 +1763,7 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Items...");                         // must be after LoadRandomEnchantmentsTable and LoadPageTexts
     sObjectMgr->LoadItemTemplates();
 
-    TC_LOG_INFO("server.loading", "Loading Item set names...");                // must be after LoadItemPrototypes
+    TC_LOG_INFO("server.loading", "Loading Item set names...");                // must be after LoadItemTemplates
     sObjectMgr->LoadItemSetNames();
 
     TC_LOG_INFO("server.loading", "Loading Creature Model Based Info Data...");
@@ -2224,6 +2228,9 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.worldserver", "World initialized in %u minutes %u seconds", (startupDuration / 60000), ((startupDuration % 60000) / 1000));
 
     TC_METRIC_EVENT("events", "World initialized", "World initialized in " + std::to_string(startupDuration / 60000) + " minutes " + std::to_string((startupDuration % 60000) / 1000) + " seconds");
+
+    sRobotConfig->StartRobotSystem();
+    sRobotManager->InitializeManager();
 }
 
 void World::DetectDBCLang()
@@ -2574,6 +2581,9 @@ void World::Update(uint32 diff)
         sMetric->Update();
         TC_METRIC_VALUE("update_time_diff", diff);
     }
+
+    // lfm update robot manager
+    sRobotManager->UpdateRobotManager(diff);
 }
 
 void World::ForceGameEventUpdate()
@@ -3001,6 +3011,13 @@ void World::_UpdateGameTime()
 /// Shutdown the server
 void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std::string& reason)
 {
+    // lfm robot 
+    sRobotManager->LogoutRobots();
+    uint32 shutdownTime = time;
+    if (shutdownTime < 11000)
+    {
+        shutdownTime = 11000;
+    }
     // ignore if server shutdown at next tick
     if (IsStopped())
         return;
@@ -3008,15 +3025,8 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
     m_ShutdownMask = options;
     m_ExitCode = exitcode;
 
-    ///- If the shutdown time is 0, evaluate shutdown on next tick (no message)
-    if (time == 0)
-        m_ShutdownTimer = 1;
-    ///- Else set the shutdown timer and warn users
-    else
-    {
-        m_ShutdownTimer = time;
-        ShutdownMsg(true, nullptr, reason);
-    }
+    m_ShutdownTimer = shutdownTime;
+    ShutdownMsg(true, nullptr, reason);
 
     sScriptMgr->OnShutdownInitiate(ShutdownExitCode(exitcode), ShutdownMask(options));
 }

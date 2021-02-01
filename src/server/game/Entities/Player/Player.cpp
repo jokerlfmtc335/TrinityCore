@@ -407,6 +407,10 @@ Player::Player(WorldSession* session): Unit(true)
     m_reputationMgr = new ReputationMgr(this);
 
     m_groupUpdateTimer.Reset(5000);
+
+    // lfm auto fishing
+    fishingDelay = 0;
+    AI_Base* robotAI;
 }
 
 Player::~Player()
@@ -1077,7 +1081,7 @@ void Player::Update(uint32 p_time)
             QuestStatusData& q_status = m_QuestStatus[*iter];
             if (q_status.Timer <= p_time)
             {
-                uint32 quest_id  = *iter;
+                uint32 quest_id = *iter;
                 ++iter;                                     // current iter will be removed in FailQuest
                 FailQuest(quest_id);
             }
@@ -1332,7 +1336,7 @@ void Player::Update(uint32 p_time)
 
     Pet* pet = GetPet();
     if (pet && !pet->IsWithinDistInMap(this, GetMap()->GetVisibilityRange()) && !pet->isPossessed())
-    //if (pet && !pet->IsWithinDistInMap(this, GetMap()->GetVisibilityDistance()) && (GetCharmGUID() && (pet->GetGUID() != GetCharmGUID())))
+        //if (pet && !pet->IsWithinDistInMap(this, GetMap()->GetVisibilityDistance()) && (GetCharmGUID() && (pet->GetGUID() != GetCharmGUID())))
         RemovePet(pet, PET_SAVE_NOT_IN_SLOT, true);
 
     if (IsAlive())
@@ -1352,6 +1356,36 @@ void Player::Update(uint32 p_time)
     if (IsHasDelayedTeleport() && IsAlive())
         TeleportTo(m_teleport_dest, m_teleport_options);
 
+    // lfm auto fishing
+    if (fishingDelay > 0)
+    {
+        fishingDelay -= p_time;
+        if (fishingDelay <= 0)
+        {
+            CastSpell(this, 7620);
+            fishingDelay = 0;
+        }
+    }
+
+    // lfm robot
+    if (m_session->isRobotSession)
+    {
+        if (IsBeingTeleportedNear())
+        {
+            WorldPacket data(MSG_MOVE_TELEPORT_ACK, 10);
+            data << GetGUID().WriteAsPacked();
+            data << uint32(0) << uint32(0);
+            m_session->HandleMoveTeleportAck(data);
+        }
+        else if (IsBeingTeleportedFar())
+        {
+            m_session->HandleMoveWorldportAck();
+        }
+        if (robotAI)
+        {
+            robotAI->Update(p_time);
+        }
+    }
 }
 
 void Player::setDeathState(DeathState s)
@@ -26959,4 +26993,43 @@ std::string Player::GetDebugInfo() const
     std::stringstream sstr;
     sstr << Unit::GetDebugInfo();
     return sstr.str();
+}
+
+// lfm get talents
+uint32 Player::GetMaxTalentCountTab()
+{
+    std::unordered_map<uint32, uint32> tabCountMap;
+    for (std::unordered_map<uint32, PlayerTalent*>::iterator ptIT = m_talents[0]->begin(); ptIT != m_talents[0]->end(); ptIT++)
+    {
+        for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
+        {
+            if (TalentEntry const* te = sTalentStore.LookupEntry(i))
+            {
+                if (TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(te->TabID))
+                {
+                    if ((GetClassMask() & talentTabInfo->ClassMask) != 0)
+                    {
+                        for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
+                        {
+                            if (te->SpellRank[rank] == ptIT->first)
+                            {
+                                tabCountMap[talentTabInfo->OrderIndex] += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    uint32 maxValue = 0;
+    uint32 result = 0;
+    for (std::unordered_map<uint32, uint32>::iterator tcIT = tabCountMap.begin(); tcIT != tabCountMap.end(); tcIT++)
+    {
+        if (tcIT->second > maxValue)
+        {
+            maxValue = tcIT->second;
+            result = tcIT->first;
+        }
+    }
+    return result;
 }

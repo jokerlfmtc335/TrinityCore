@@ -186,6 +186,11 @@ class TC_GAME_API Group
 
         void Update(uint32 diff);
 
+        // lfm group target icon
+        std::unordered_map<int, ObjectGuid>  GetGroupTargetIconMap();
+        int  GetTargetIconByOG(ObjectGuid pmOG);
+        ObjectGuid  GetOGByTargetIcon(int pmTargetIcon);
+
         // group manipulation methods
         bool Create(Player* leader);
         void LoadGroupFromDB(Field* field);

@@ -33,6 +33,9 @@
 #include <queue>
 #include <unordered_set>
 
+ // lfm robot
+#include "AI_Base.h"
+
 struct AccessRequirement;
 struct AchievementEntry;
 struct AreaTableEntry;
@@ -884,6 +887,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         explicit Player(WorldSession* session);
         ~Player();
 
+        // lfm auto fishing
+        int fishingDelay;
+        AI_Base* robotAI;
+
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(GetAI()); }
 
         void CleanupsBeforeDelete(bool finalCleanup = true) override;
@@ -1447,6 +1454,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         bool AddTalent(uint32 spellId, uint8 spec, bool learning);
         bool HasTalent(uint32 spell_id, uint8 spec) const;
+
+        // lfm get talents
+        uint32 GetMaxTalentCountTab();
 
         uint32 CalculateTalentsPoints() const;
 
