@@ -3014,9 +3014,9 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
     // lfm robot 
     sRobotManager->LogoutRobots();
     uint32 shutdownTime = time;
-    if (shutdownTime < 11000)
+    if (shutdownTime < 11)
     {
-        shutdownTime = 11000;
+        shutdownTime = 11;
     }
     // ignore if server shutdown at next tick
     if (IsStopped())
