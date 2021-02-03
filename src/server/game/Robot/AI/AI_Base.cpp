@@ -15,6 +15,7 @@
 #include "GridNotifiers.h"
 #include "Map.h"
 #include "Pet.h"
+#include "MapManager.h"
 
 AI_Base::AI_Base(Player* pmMe)
 {
@@ -167,7 +168,6 @@ bool AI_Base::Chasing()
 
 void AI_Base::Update(uint32 pmDiff)
 {
-    sb->Update(pmDiff);
     if (!me)
     {
         return;
@@ -176,6 +176,7 @@ void AI_Base::Update(uint32 pmDiff)
     {
         if (mySesson->isRobotSession)
         {
+            sb->Update(pmDiff);
             if (Group* myGroup = me->GetGroup())
             {
                 if (readyCheckDelay > 0)
@@ -226,55 +227,57 @@ void AI_Base::Update(uint32 pmDiff)
                     teleportAssembleDelay -= pmDiff;
                     if (teleportAssembleDelay <= 0)
                     {
-                        if (Player* leaderPlayer = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+                        Player* leaderPlayer = nullptr;
+                        bool canTeleport = true;
+                        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                         {
-                            bool canTeleport = true;
-                            if (Group* myGroup = me->GetGroup())
+                            if (Player* member = groupRef->GetSource())
                             {
-                                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                                if (member->GetGUID() == myGroup->GetLeaderGUID())
                                 {
-                                    if (Player* member = groupRef->GetSource())
-                                    {
-                                        if (member->IsBeingTeleported())
-                                        {
-                                            teleportAssembleDelay = 100;
-                                            canTeleport = false;
-                                            break;
-                                        }
-                                    }
+                                    leaderPlayer = member;
+                                }
+                                if (member->IsBeingTeleported())
+                                {
+                                    sRobotManager->WhisperTo(leaderPlayer, "Some one is teleporting. I will wait.", Language::LANG_UNIVERSAL, me);
+                                    teleportAssembleDelay = 2000;
+                                    canTeleport = false;
+                                    break;
                                 }
                             }
-                            if (canTeleport)
+                        }
+                        if (canTeleport)
+                        {
+                            if (leaderPlayer)
                             {
-                                if (!me->IsAlive())
+                                if (leaderPlayer->IsInWorld())
                                 {
-                                    me->ResurrectPlayer(0.2f);
-                                    me->SpawnCorpseBones();
-                                }
-                                me->GetThreatManager().ClearAllThreat();
-                                me->ClearInCombat();
-                                sb->ClearTarget();
-                                if (leaderPlayer->GetMapId() != me->GetMapId())
-                                {
-                                    canTeleport = false;
-                                    if (Map* leaderMap = leaderPlayer->GetMap())
+                                    if (!me->IsAlive())
                                     {
-                                        if (!leaderMap->CannotEnter(me))
-                                        {
-                                            canTeleport = true;
-                                        }
+                                        me->ResurrectPlayer(0.2f);
+                                        me->SpawnCorpseBones();
                                     }
-                                }
-                                if (canTeleport)
-                                {
-                                    me->TeleportTo(leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ(), leaderPlayer->GetOrientation());
-                                    sRobotManager->WhisperTo(me, "I have come", Language::LANG_UNIVERSAL, leaderPlayer);
-                                    return;
+                                    me->GetThreatManager().ClearAllThreat();
+                                    me->ClearInCombat();
+                                    sb->ClearTarget();
+                                    if (me->TeleportTo(leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ(), leaderPlayer->GetOrientation()))
+                                    {
+                                        sRobotManager->WhisperTo(leaderPlayer, "I have come", Language::LANG_UNIVERSAL, me);
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        sRobotManager->WhisperTo(leaderPlayer, "I can not come to you", Language::LANG_UNIVERSAL, me);
+                                    }
                                 }
                                 else
                                 {
-                                    sRobotManager->WhisperTo(me, "I can not come to you", Language::LANG_UNIVERSAL, leaderPlayer);
+                                    sRobotManager->WhisperTo(leaderPlayer, "Leader is not in world", Language::LANG_UNIVERSAL, me);
                                 }
+                            }
+                            else
+                            {
+                                sRobotManager->WhisperTo(leaderPlayer, "Can not find leader", Language::LANG_UNIVERSAL, me);
                             }
                         }
                     }

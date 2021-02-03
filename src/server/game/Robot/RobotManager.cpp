@@ -448,7 +448,15 @@ uint32 RobotManager::CreateRobotCharacter(uint32 pmAccountID, uint32 pmCharacter
     uint8 gender = 0, skin = 0, face = 0, hairStyle = 0, hairColor = 0, facialHair = 0;
     while (true)
     {
-        gender = urand(0, 1);
+        gender = urand(0, 100);
+        if (gender < 50)
+        {
+            gender = 0;
+        }
+        else
+        {
+            gender = 1;
+        }
         face = urand(0, 5);
         hairStyle = urand(0, 5);
         hairColor = urand(0, 5);
@@ -869,8 +877,9 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
             if (myGroup->GetLeaderGUID() == pmPlayer->GetGUID())
             {
                 bool mainTankSet = false;
-                bool paladinJustice = false;
-                bool paladinWisdom = false;
+                bool paladinJudgementJustice = false;
+                bool paladinJudgementLight = false;
+                bool paladinJudgementWisdom = false;
 
                 bool paladinAura_concentration = false;
                 bool paladinAura_devotion = false;
@@ -968,17 +977,27 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                             {
                                 if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
                                 {
-                                    if (memberAI->groupRole == GroupRole::GroupRole_DPS)
+                                    if (memberAI->groupRole != GroupRole::GroupRole_Healer)
                                     {
-                                        if (!paladinJustice)
+                                        if (!paladinJudgementJustice)
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
-                                            paladinJustice = true;
+                                            paladinJudgementJustice = true;
                                         }
-                                        else if (!paladinWisdom)
+                                        else if (!paladinJudgementLight)
+                                        {
+                                            sp->judgementType = PaladinJudgementType::PaladinJudgementType_Light;
+                                            paladinJudgementLight = true;
+                                        }
+                                        else if (!paladinJudgementWisdom)
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Wisdom;
-                                            paladinWisdom = true;
+                                            paladinJudgementWisdom = true;
+                                        }
+                                        else
+                                        {
+                                            sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
+                                            paladinJudgementJustice = true;
                                         }
                                     }
                                     switch (sp->blessingType)
@@ -1879,14 +1898,14 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                             }
                                             else
                                             {
-                                                memberAI->teleportAssembleDelay = 1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS;
-                                                replyStream << "I will join you in 1 minute";
+                                                memberAI->teleportAssembleDelay = urand(30 * TimeConstants::IN_MILLISECONDS, 1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                                                replyStream << "I will join you in " << memberAI->teleportAssembleDelay << " ms";
                                             }
                                         }
                                         else
                                         {
-                                            memberAI->teleportAssembleDelay = 2 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS;
-                                            replyStream << "I will revive and join you in 2 minutes";
+                                            memberAI->teleportAssembleDelay = urand(1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 2 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                                            replyStream << "I will revive and join you in " << memberAI->teleportAssembleDelay << " ms";
                                         }
                                     }
                                     WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
@@ -2611,8 +2630,12 @@ void RobotManager::LearnPlayerTalents(Player* pmTargetPlayer)
         }
         else if (pmTargetPlayer->GetClass() == Classes::CLASS_PALADIN)
         {
-            specialty = urand(0, 1);
-            if (specialty == 1)
+            specialty = urand(0, 100);
+            if (specialty < 20)
+            {
+                specialty = 0;
+            }
+            else
             {
                 specialty = 2;
             }

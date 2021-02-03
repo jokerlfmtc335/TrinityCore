@@ -10,13 +10,49 @@ Script_Paladin::Script_Paladin(Player* pmMe) :Script_Base(pmMe)
 {
     blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
     auraType = PaladinAuraType::PaladinAuraType_Retribution;
-    judgementType = PaladinJudgementType::PaladinJudgementType_Light;
+    judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
+
+    judgementDelay = 0;
+    consecrationDelay = 0;
+    hammerOfWrathDelay = 0;
+    righteousFuryDelay = 0;
+    hammerOfJusticeDelay = 0;
+    sealOfRighteousnessDelay = 0;
+}
+
+void Script_Paladin::Update(uint32 pmDiff)
+{
+    Script_Base::Update(pmDiff);
+    if (judgementDelay < 300000)
+    {
+        judgementDelay += pmDiff;
+    }
+    if (consecrationDelay < 300000)
+    {
+        consecrationDelay += pmDiff;
+    }
+    if (hammerOfWrathDelay < 300000)
+    {
+        hammerOfWrathDelay += pmDiff;
+    }
+    if (righteousFuryDelay < 300000)
+    {
+        righteousFuryDelay += pmDiff;
+    }
+    if (hammerOfJusticeDelay < 300000)
+    {
+        hammerOfJusticeDelay += pmDiff;
+    }
+    if (sealOfRighteousnessDelay < 300000)
+    {
+        sealOfRighteousnessDelay += pmDiff;
+    }
 }
 
 void Script_Paladin::Reset()
 {
     blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-     uint32 characterTalentTab = me->GetMaxTalentCountTab();
+    uint32 characterTalentTab = me->GetMaxTalentCountTab();
     switch (characterTalentTab)
     {
     case 0:
@@ -53,7 +89,7 @@ bool Script_Paladin::Heal(Unit* pmTarget)
     {
         UseManaPotion();
     }
-     uint32 characterTalentTab = me->GetMaxTalentCountTab();
+    uint32 characterTalentTab = me->GetMaxTalentCountTab();
     switch (characterTalentTab)
     {
     case 0:
@@ -223,85 +259,121 @@ bool Script_Paladin::Tank(Unit* pmTarget, bool pmChase, bool pmAOE)
         }
     }
     me->Attack(pmTarget, true);
-    if (CastSpell(me, "Righteous Fury", PALADIN_RANGE_DISTANCE, true))
+    if (righteousFuryDelay > 10000)
     {
-        return true;
-    }
-    if (pmTarget->GetHealthPct() < 20.0f)
-    {
-        if (CastSpell(pmTarget, "Hammer of Wrath", MELEE_MAX_DISTANCE))
+        if (CastSpell(me, "Righteous Fury", PALADIN_RANGE_DISTANCE, true))
         {
+            righteousFuryDelay = 0;
             return true;
         }
     }
-    if (pmTarget->IsNonMeleeSpellCast(false))
+    if (hammerOfWrathDelay > 7000)
     {
-        if (CastSpell(pmTarget, "Hammer of Justice", MELEE_MAX_DISTANCE))
+        if (pmTarget->GetHealthPct() < 20.0f)
         {
-            return true;
-        }
-    }
-    if (pmAOE)
-    {
-        uint32 meleeCount = 0;
-        if (Group* myGroup = me->GetGroup())
-        {
-            for (std::set<Unit*>::iterator gaIT = me->getAttackers().begin(); gaIT != me->getAttackers().end(); gaIT++)
+            if (CastSpell(pmTarget, "Hammer of Wrath", MELEE_MAX_DISTANCE))
             {
-                if (Unit* eachAttacker = *gaIT)
-                {
-                    if (eachAttacker->GetTarget() != me->GetGUID())
-                    {
-                        if (me->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
-                        {
-                            meleeCount++;
-                        }
-                    }
-                }
-            }
-        }
-        if (meleeCount > 1)
-        {
-            if (CastSpell(me, "Consecration"))
-            {
+                hammerOfWrathDelay = 0;
                 return true;
             }
         }
     }
-    if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+    if (hammerOfJusticeDelay > 61000)
     {
-        return true;
-    }
-    switch (judgementType)
-    {
-    case PaladinJudgementType::PaladinJudgementType_Justice:
-    {
-        if (CastSpell(pmTarget, "Judgement of Justice"))
+        if (pmTarget->IsNonMeleeSpellCast(false))
         {
+            if (CastSpell(pmTarget, "Hammer of Justice", MELEE_MAX_DISTANCE))
+            {
+                hammerOfJusticeDelay = 0;
+                return true;
+            }
+        }
+    }
+    if (consecrationDelay > 9000)
+    {
+        if (pmAOE)
+        {
+            uint32 meleeCount = 0;
+            if (Group* myGroup = me->GetGroup())
+            {
+                for (std::set<Unit*>::iterator gaIT = me->getAttackers().begin(); gaIT != me->getAttackers().end(); gaIT++)
+                {
+                    if (Unit* eachAttacker = *gaIT)
+                    {
+                        if (eachAttacker->GetTarget() != me->GetGUID())
+                        {
+                            if (me->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                            {
+                                meleeCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            if (meleeCount > 1)
+            {
+                if (CastSpell(me, "Consecration"))
+                {
+                    consecrationDelay = 0;
+                    return true;
+                }
+            }
+        }
+    }
+    if (sealOfRighteousnessDelay > 5000)
+    {
+        if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+        {
+            sealOfRighteousnessDelay = 0;
             return true;
         }
-        break;
     }
-    case PaladinJudgementType::PaladinJudgementType_Wisdom:
+    if (judgementDelay > 11000)
     {
-        if (CastSpell(pmTarget, "Judgement of Wisdom"))
+        switch (judgementType)
         {
-            return true;
+        case PaladinJudgementType::PaladinJudgementType_Justice:
+        {
+            if (CastSpell(pmTarget, "Judgement of Justice"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
         }
-        break;
-    }
-    case PaladinJudgementType::PaladinJudgementType_Light:
-    {
+        case PaladinJudgementType::PaladinJudgementType_Light:
+        {
+            if (CastSpell(pmTarget, "Judgement of Light"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
+        }
+        case PaladinJudgementType::PaladinJudgementType_Wisdom:
+        {
+            if (CastSpell(pmTarget, "Judgement of Wisdom"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
         if (CastSpell(pmTarget, "Judgement of Light"))
         {
+            judgementDelay = 0;
             return true;
         }
-        break;
-    }
-    default:
-    {
-        break;
-    }
+        if (CastSpell(pmTarget, "Judgement of Wisdom"))
+        {
+            judgementDelay = 0;
+            return true;
+        }
     }
 
     return true;
@@ -325,23 +397,23 @@ bool Script_Paladin::DPS(Unit* pmTarget, bool pmChase, bool pmAOE)
     {
         UseManaPotion();
     }
-     uint32 characterTalentTab = me->GetMaxTalentCountTab();
+    uint32 characterTalentTab = me->GetMaxTalentCountTab();
     switch (characterTalentTab)
     {
     case 0:
     {
-        return DPS_Common(pmTarget, pmChase);
+        return DPS_Common(pmTarget, pmChase, pmAOE);
     }
     case 1:
     {
-        return DPS_Common(pmTarget, pmChase);
+        return DPS_Common(pmTarget, pmChase, pmAOE);
     }
     case 2:
     {
-        return DPS_Common(pmTarget, pmChase);
+        return DPS_Common(pmTarget, pmChase, pmAOE);
     }
     default:
-        return DPS_Common(pmTarget, pmChase);
+        return DPS_Common(pmTarget, pmChase, pmAOE);
     }
 }
 
@@ -350,7 +422,7 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase)
     return false;
 }
 
-bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase)
+bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE)
 {
     if (!pmTarget)
     {
@@ -392,54 +464,133 @@ bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase)
         }
     }
     me->Attack(pmTarget, true);
-    if (pmTarget->GetHealthPct() < 20.0f)
+    if (hammerOfWrathDelay > 7000)
     {
-        if (CastSpell(pmTarget, "Hammer of Wrath", MELEE_MAX_DISTANCE))
+        if (pmTarget->GetHealthPct() < 20.0f)
         {
+            if (CastSpell(pmTarget, "Hammer of Wrath", MELEE_MAX_DISTANCE))
+            {
+                hammerOfWrathDelay = 0;
+                return true;
+            }
+        }
+    }
+    if (hammerOfJusticeDelay > 61000)
+    {
+        if (pmTarget->IsNonMeleeSpellCast(false))
+        {
+            if (CastSpell(pmTarget, "Hammer of Justice", MELEE_MAX_DISTANCE))
+            {
+                hammerOfJusticeDelay = 0;
+                return true;
+            }
+        }
+    }
+    if (consecrationDelay > 9000)
+    {
+        if (pmAOE)
+        {
+            if (Group* myGroup = me->GetGroup())
+            {
+                Player* mainTank = ObjectAccessor::GetPlayer(*me, myGroup->GetOGByTargetIcon(6));
+                if (!mainTank)
+                {
+                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                    {
+                        if (Player* member = groupRef->GetSource())
+                        {
+                            if (member->IsAlive())
+                            {
+                                if (AI_Base* memberAI = member->robotAI)
+                                {
+                                    if (memberAI->groupRole == GroupRole::GroupRole_Tank)
+                                    {
+                                        mainTank = member;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (mainTank)
+                {
+                    uint32 meleeCount = 0;
+                    for (std::set<Unit*>::iterator gaIT = mainTank->getAttackers().begin(); gaIT != mainTank->getAttackers().end(); gaIT++)
+                    {
+                        if (Unit* eachAttacker = *gaIT)
+                        {
+                            if (mainTank->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                            {
+                                meleeCount++;
+                            }
+                        }
+                    }
+                    if (meleeCount > 1)
+                    {
+                        if (CastSpell(me, "Consecration"))
+                        {
+                            consecrationDelay = 0;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (sealOfRighteousnessDelay > 5000)
+    {
+        if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+        {
+            sealOfRighteousnessDelay = 0;
             return true;
         }
     }
-    if (pmTarget->IsNonMeleeSpellCast(false))
+    if (judgementDelay > 11000)
     {
-        if (CastSpell(pmTarget, "Hammer of Justice", MELEE_MAX_DISTANCE))
+        switch (judgementType)
         {
-            return true;
-        }
-    }
-    if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
-    {
-        return true;
-    }
-    switch (judgementType)
-    {
-    case PaladinJudgementType::PaladinJudgementType_Justice:
-    {
-        if (CastSpell(pmTarget, "Judgement of Justice"))
+        case PaladinJudgementType::PaladinJudgementType_Justice:
         {
-            return true;
+            if (CastSpell(pmTarget, "Judgement of Justice"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
         }
-        break;
-    }
-    case PaladinJudgementType::PaladinJudgementType_Wisdom:
-    {
-        if (CastSpell(pmTarget, "Judgement of Wisdom"))
+        case PaladinJudgementType::PaladinJudgementType_Light:
         {
-            return true;
+            if (CastSpell(pmTarget, "Judgement of Light"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
         }
-        break;
-    }
-    case PaladinJudgementType::PaladinJudgementType_Light:
-    {
+        case PaladinJudgementType::PaladinJudgementType_Wisdom:
+        {
+            if (CastSpell(pmTarget, "Judgement of Wisdom"))
+            {
+                judgementDelay = 0;
+                return true;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
         if (CastSpell(pmTarget, "Judgement of Light"))
         {
+            judgementDelay = 0;
             return true;
         }
-        break;
-    }
-    default:
-    {
-        break;
-    }
+        if (CastSpell(pmTarget, "Judgement of Wisdom"))
+        {
+            judgementDelay = 0;
+            return true;
+        }
     }
 
     return true;

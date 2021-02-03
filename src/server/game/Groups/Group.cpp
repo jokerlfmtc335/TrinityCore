@@ -166,6 +166,9 @@ bool Group::Create(Player* leader)
     if (!isLFGGroup())
         m_lootMethod = GROUP_LOOT;
 
+    // lfm group loot 
+    m_lootMethod = FREE_FOR_ALL;
+
     m_lootThreshold = ITEM_QUALITY_UNCOMMON;
     m_looterGuid = leaderGuid;
     m_masterLooterGuid.Clear();

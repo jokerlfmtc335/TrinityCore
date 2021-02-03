@@ -1370,17 +1370,6 @@ void Player::Update(uint32 p_time)
     // lfm robot
     if (m_session->isRobotSession)
     {
-        if (IsBeingTeleportedNear())
-        {
-            WorldPacket data(MSG_MOVE_TELEPORT_ACK, 10);
-            data << GetGUID().WriteAsPacked();
-            data << uint32(0) << uint32(0);
-            m_session->HandleMoveTeleportAck(data);
-        }
-        else if (IsBeingTeleportedFar())
-        {
-            m_session->HandleMoveWorldportAck();
-        }
         if (robotAI)
         {
             robotAI->Update(p_time);

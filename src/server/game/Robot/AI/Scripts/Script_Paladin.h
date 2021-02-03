@@ -48,6 +48,7 @@ class Script_Paladin :public Script_Base
 public:    
     Script_Paladin(Player* pmMe);
 
+    void Update(uint32 pmDiff);
     void Reset();
     bool DPS(Unit* pmTarget, bool pmChase = true, bool pmAOE = false);
     bool Tank(Unit* pmTarget, bool pmChase, bool pmAOE = false);
@@ -56,12 +57,19 @@ public:
     bool Buff(Unit* pmTarget, bool pmCure = true);
 
     bool DPS_Retribution(Unit* pmTarget, bool pmChase);
-    bool DPS_Common(Unit* pmTarget, bool pmChase);
+    bool DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE = false);
 
     bool Heal_Holy(Unit* pmTarget);
 
     uint32 auraType;
     uint32 blessingType;
     uint32 judgementType;
+
+    uint32 judgementDelay;
+    uint32 consecrationDelay;
+    uint32 hammerOfWrathDelay;
+    uint32 righteousFuryDelay;
+    uint32 hammerOfJusticeDelay;
+    uint32 sealOfRighteousnessDelay;
 };
 #endif

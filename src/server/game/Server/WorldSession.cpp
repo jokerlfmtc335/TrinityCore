@@ -285,6 +285,20 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     if (isRobotSession)
     {
         ProcessQueryCallbacks();
+        if (_player)
+        {
+            if (_player->IsBeingTeleportedNear())
+            {
+                WorldPacket data(MSG_MOVE_TELEPORT_ACK, 10);
+                data << _player->GetGUID().WriteAsPacked();
+                data << uint32(0) << uint32(0);
+                HandleMoveTeleportAck(data);
+            }
+            else if (_player->IsBeingTeleportedFar())
+            {
+                HandleMoveWorldportAck();
+            }
+        }
         return true;
     }
     ///- Before we process anything:
