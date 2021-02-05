@@ -2604,6 +2604,198 @@ public:
     }
 };
 
+// lfm extra scripts 
+enum LFM_Creature_Entry
+{
+    LFM_Creature_Entry_Deathstalker_Vincent = 4444,
+    LFM_Creature_Entry_Arugal = 10000,
+};
+
+class npc_arugal_10000 : public CreatureScript
+{
+public:
+    npc_arugal_10000() : CreatureScript("npc_arugal_10000") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_arugal_10000AI(creature);
+    }
+
+    struct npc_arugal_10000AI : public ScriptedAI
+    {
+        npc_arugal_10000AI(Creature* creature) : ScriptedAI(creature)
+        {
+            show = true;
+        }
+
+        bool show;
+        EventMap events;
+
+        void Reset() override
+        {
+            me->SetImmuneToNPC(true);
+            me->SetImmuneToPC(true);
+            show = true;
+            events.Reset();
+            events.ScheduleEvent(1, 1000ms);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (show)
+            {
+                events.Update(diff);
+                switch (events.ExecuteEvent())
+                {
+                case 1:
+                {
+                    if (me->SelectNearestPlayer(45.0f))
+                    {
+                        events.ScheduleEvent(2, 1000ms);
+                        events.ScheduleEvent(3, 10000ms);
+                        events.ScheduleEvent(4, 18000ms);
+                        events.ScheduleEvent(5, 22000ms);
+                        events.ScheduleEvent(6, 24000ms);
+                        events.ScheduleEvent(7, 24500ms);
+                        events.ScheduleEvent(8, 29000ms);
+                        events.ScheduleEvent(9, 29500ms);
+                    }
+                    else
+                    {
+                        events.Repeat(1000ms);
+                    }
+                    break;
+                }
+                case 2:
+                {
+                    me->AI()->Talk(0);
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_TALK_NO_SHEATHE);
+                    break;
+                }
+                case 3:
+                {
+                    me->AI()->Talk(1);
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_POINT_NO_SHEATHE);
+                    break;
+                }
+                case 4:
+                {
+                    me->AI()->Talk(2);
+                    break;
+                }
+                case 5:
+                {
+                    std::list<Creature*> list;
+                    me->GetCreatureListWithEntryInGrid(list, LFM_Creature_Entry::LFM_Creature_Entry_Deathstalker_Vincent, 10.0f);
+                    if (list.size() > 0)
+                    {
+                        for (std::list<Creature*>::iterator cIT = list.begin(); cIT != list.end(); cIT++)
+                        {
+                            if (Creature* vincent = *cIT)
+                            {
+                                // handle only one
+                                me->CastSpell(me, 12948);
+                                vincent->AI()->SetData(1, 1);
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        show = false;
+                        events.Reset();
+                    }
+                    break;
+                }
+                case 6:
+                {
+                    if (Player* targetPlayer = me->SelectNearestPlayer(45.0f))
+                    {
+                        me->SetFacingToObject(targetPlayer);
+                    }
+                    break;
+                }
+                case 7:
+                {
+                    me->AI()->Talk(3);
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_LAUGH_NO_SHEATHE);
+                    break;
+                }
+                case 8:
+                {
+                    me->CastSpell(me, 7141);
+                    break;
+                }
+                case 9:
+                {
+                    me->SetRespawnDelay(7 * TimeConstants::DAY);
+                    me->DespawnOrUnsummon();
+                    show = false;
+                    break;
+                }
+                }
+            }
+        }
+    };
+};
+
+class npc_deathstalker_vincent_4444 : public CreatureScript
+{
+public:
+    npc_deathstalker_vincent_4444() : CreatureScript("npc_deathstalker_vincent_4444") { }
+
+    struct npc_deathstalker_vincent_4444AI : public ScriptedAI
+    {
+        npc_deathstalker_vincent_4444AI(Creature* creature) : ScriptedAI(creature)
+        {
+            show = true;
+        }
+
+        bool show;
+        EventMap events;
+
+        void Reset() override
+        {
+            me->SetImmuneToAll(true);
+            if (Map* instance = me->GetMap())
+            {
+                if (Creature* cRethilgore = instance->GetCreatureBySpawnId(16242))
+                {
+                    me->ClearUnitState(UNIT_STATE_DIED);
+                    me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                    float x = 0.0f, y = 0.0f, z = 0.0f;
+                    me->GetNearPoint(me, x, y, z, 1.0f, M_PI);
+                    if (TempSummon* arugal = me->SummonCreature(10000, x, y, z, 0))
+                    {
+                        me->SetFacingToObject(arugal);
+                        arugal->SetFacingToObject(me);
+                    }
+                }
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1 && data == 1)
+            {
+                me->AI()->Talk(0);
+                me->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);
+                me->AddUnitState(UNIT_STATE_DIED);
+                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_DEAD);
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_deathstalker_vincent_4444AI(creature);
+    }
+};
+
 void AddSC_npcs_special()
 {
     new npc_air_force_bots();
@@ -2629,4 +2821,8 @@ void AddSC_npcs_special()
     new npc_train_wrecker();
     new npc_argent_squire_gruntling();
     new npc_bountiful_table();
+
+    // lfm scripts 
+    new npc_arugal_10000();
+    new npc_deathstalker_vincent_4444();
 }

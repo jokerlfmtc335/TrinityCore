@@ -108,11 +108,14 @@ public:
 
         bool bCheckChances()
         {
-            uint32 uiChances = urand(0, 99);
-            if (uiChances <= 15)
-                return false;
-            else
-                return true;
+            // lfm smite cast
+            return true;
+
+            //uint32 uiChances = urand(0, 99);
+            //if (uiChances <= 15)
+            //    return false;
+            //else
+            //    return true;
         }
 
         void UpdateAI(uint32 uiDiff) override
@@ -183,9 +186,15 @@ public:
                         }
                         case 2:
                             if (uiHealth == 1)
+                            {
                                 SetEquipmentSlots(false, EQUIP_AXE, EQUIP_AXE, EQUIP_NO_CHANGE);
+                            }
                             else
+                            {
                                 SetEquipmentSlots(false, EQUIP_MACE, EQUIP_UNEQUIP, EQUIP_NO_CHANGE);
+                                // lfm smite's hammer 
+                                DoCastSelf(6436);
+                            }
                             uiTimer = 500;
                             uiPhase = 3;
                             break;

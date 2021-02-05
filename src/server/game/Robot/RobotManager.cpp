@@ -876,10 +876,9 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
         {
             if (myGroup->GetLeaderGUID() == pmPlayer->GetGUID())
             {
-                bool mainTankSet = false;
-                bool paladinJudgementJustice = false;
-                bool paladinJudgementLight = false;
-                bool paladinJudgementWisdom = false;
+                bool paladinJudgement_Justice = false;
+                bool paladinJudgement_Light = false;
+                bool paladinJudgement_Wisdom = false;
 
                 bool paladinAura_concentration = false;
                 bool paladinAura_devotion = false;
@@ -891,6 +890,9 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                 bool paladinBlessing_kings = false;
                 bool paladinBlessing_might = false;
                 bool paladinBlessing_wisdom = false;
+
+                bool paladinSeal_Righteousness = false;
+                bool paladinSeal_Justice = false;
 
                 int rtiIndex = 0;
 
@@ -964,14 +966,6 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                 break;
                             }
                             }
-                            if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                            {
-                                if (!mainTankSet)
-                                {
-                                    myGroup->SetTargetIcon(6, pmPlayer->GetGUID(), member->GetGUID());
-                                    mainTankSet = true;
-                                }
-                            }
                             memberAI->Reset();
                             if (member->GetClass() == Classes::CLASS_PALADIN)
                             {
@@ -979,25 +973,40 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                 {
                                     if (memberAI->groupRole != GroupRole::GroupRole_Healer)
                                     {
-                                        if (!paladinJudgementJustice)
+                                        if (!paladinJudgement_Justice)
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
-                                            paladinJudgementJustice = true;
+                                            paladinJudgement_Justice = true;
                                         }
-                                        else if (!paladinJudgementLight)
+                                        else if (!paladinJudgement_Light)
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Light;
-                                            paladinJudgementLight = true;
+                                            paladinJudgement_Light = true;
                                         }
-                                        else if (!paladinJudgementWisdom)
+                                        else if (!paladinJudgement_Wisdom)
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Wisdom;
-                                            paladinJudgementWisdom = true;
+                                            paladinJudgement_Wisdom = true;
                                         }
                                         else
                                         {
                                             sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
-                                            paladinJudgementJustice = true;
+                                            paladinJudgement_Justice = true;
+                                        }
+                                        if (!paladinSeal_Justice)
+                                        {
+                                            sp->sealType = PaladinSealType::PaladinSealType_Justice;
+                                            paladinSeal_Justice = true;
+                                        }
+                                        else if (!paladinSeal_Righteousness)
+                                        {
+                                            sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
+                                            paladinSeal_Righteousness = true;
+                                        }
+                                        else
+                                        {
+                                            sp->sealType = PaladinSealType::PaladinSealType_Justice;
+                                            paladinSeal_Justice = true;
                                         }
                                     }
                                     switch (sp->blessingType)
@@ -1648,7 +1657,8 @@ void RobotManager::HandlePacket(WorldSession* pmSession, WorldPacket pmPacket)
                     if (me->IsResurrectRequested())
                     {
                         me->ResurrectUsingRequestData();
-                        robotAI->sb->Reset();
+                        robotAI->sb->rm->ResetMovement();
+                        robotAI->sb->ClearTarget();
                     }
                     break;
                 }
@@ -2398,16 +2408,16 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                         {
                                             if (commandVector.size() > 1)
                                             {
-                                                std::string blessingtypeName = commandVector.at(1);
-                                                if (blessingtypeName == "kings")
+                                                std::string blessingTypeName = commandVector.at(1);
+                                                if (blessingTypeName == "kings")
                                                 {
                                                     sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
                                                 }
-                                                else if (blessingtypeName == "might")
+                                                else if (blessingTypeName == "might")
                                                 {
                                                     sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
                                                 }
-                                                else if (blessingtypeName == "wisdom")
+                                                else if (blessingTypeName == "wisdom")
                                                 {
                                                     sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
                                                 }
@@ -2441,6 +2451,50 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                         }
                                         WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
                                     }
+                                }
+                                else if (commandName == "ps")
+                                {
+                                if (member->GetClass() == Classes::CLASS_PALADIN)
+                                {
+                                    std::ostringstream replyStream;
+                                    if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
+                                    {
+                                        if (commandVector.size() > 1)
+                                        {
+                                            std::string sealTypeName = commandVector.at(1);
+                                            if (sealTypeName == "righteousness")
+                                            {
+                                                sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
+                                            }
+                                            else if (sealTypeName == "justice")
+                                            {
+                                                sp->sealType = PaladinSealType::PaladinSealType_Justice;
+                                            }
+                                            else
+                                            {
+                                                replyStream << "Unknown type";
+                                            }
+                                        }
+                                        switch (sp->sealType)
+                                        {
+                                        case PaladinSealType::PaladinSealType_Righteousness:
+                                        {
+                                            replyStream << "righteousness";
+                                            break;
+                                        }
+                                        case PaladinSealType::PaladinSealType_Justice:
+                                        {
+                                            replyStream << "justice";
+                                            break;
+                                        }
+                                        default:
+                                        {
+                                            break;
+                                        }
+                                        }
+                                    }
+                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
+                                }
                                 }
                                 else if (commandName == "ha")
                                 {
@@ -2889,7 +2943,7 @@ bool RobotManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetLe
         resetEquipments = true;
     }
     InitializeEquipments(pmTargetPlayer, resetEquipments);
-
+    
     std::ostringstream msgStream;
     msgStream << pmTargetPlayer->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());

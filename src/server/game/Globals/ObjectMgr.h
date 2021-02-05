@@ -1736,6 +1736,10 @@ class TC_GAME_API ObjectMgr
 
         PlayerTotemModelMap _playerTotemModel;
         VehicleSeatAddonContainer _vehicleSeatAddonStore;
+
+        // lfm creature_template_damage_azerothcore
+        public:
+        std::unordered_map<uint32, CreatureTemplateDamageAzerothcore*> ctdaMap;
 };
 
 #define sObjectMgr ObjectMgr::instance()

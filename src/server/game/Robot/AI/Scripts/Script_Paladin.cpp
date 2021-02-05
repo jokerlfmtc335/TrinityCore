@@ -11,13 +11,14 @@ Script_Paladin::Script_Paladin(Player* pmMe) :Script_Base(pmMe)
     blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
     auraType = PaladinAuraType::PaladinAuraType_Retribution;
     judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
+    sealType = PaladinSealType::PaladinSealType_Righteousness;
 
     judgementDelay = 0;
     consecrationDelay = 0;
     hammerOfWrathDelay = 0;
     righteousFuryDelay = 0;
     hammerOfJusticeDelay = 0;
-    sealOfRighteousnessDelay = 0;
+    sealDelay = 0;
 }
 
 void Script_Paladin::Update(uint32 pmDiff)
@@ -43,15 +44,16 @@ void Script_Paladin::Update(uint32 pmDiff)
     {
         hammerOfJusticeDelay += pmDiff;
     }
-    if (sealOfRighteousnessDelay < 300000)
+    if (sealDelay < 300000)
     {
-        sealOfRighteousnessDelay += pmDiff;
+        sealDelay += pmDiff;
     }
 }
 
 void Script_Paladin::Reset()
 {
-    blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+    judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
+    sealType = PaladinSealType::PaladinSealType_Righteousness;
     uint32 characterTalentTab = me->GetMaxTalentCountTab();
     switch (characterTalentTab)
     {
@@ -320,12 +322,32 @@ bool Script_Paladin::Tank(Unit* pmTarget, bool pmChase, bool pmAOE)
             }
         }
     }
-    if (sealOfRighteousnessDelay > 5000)
+    if (sealDelay > 5000)
     {
-        if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+        switch (sealType)
         {
-            sealOfRighteousnessDelay = 0;
-            return true;
+        case PaladinSealType::PaladinSealType_Justice:
+        {
+            if (CastSpell(me, "Seal of Justice", MELEE_MAX_DISTANCE, true))
+            {
+                sealDelay = 0;
+                return true;
+            }
+            break;
+        }
+        case PaladinSealType::PaladinSealType_Righteousness:
+        {
+            if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+            {
+                sealDelay = 0;
+                return true;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
         }
     }
     if (judgementDelay > 11000)
@@ -537,12 +559,32 @@ bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE)
             }
         }
     }
-    if (sealOfRighteousnessDelay > 5000)
+    if (sealDelay > 5000)
     {
-        if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+        switch (sealType)
         {
-            sealOfRighteousnessDelay = 0;
-            return true;
+        case PaladinSealType::PaladinSealType_Justice:
+        {
+            if (CastSpell(me, "Seal of Justice", MELEE_MAX_DISTANCE, true))
+            {
+                sealDelay = 0;
+                return true;
+            }
+            break;
+        }
+        case PaladinSealType::PaladinSealType_Righteousness:
+        {
+            if (CastSpell(me, "Seal of Righteousness", MELEE_MAX_DISTANCE, true))
+            {
+                sealDelay = 0;
+                return true;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
         }
     }
     if (judgementDelay > 11000)

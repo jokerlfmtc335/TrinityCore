@@ -118,7 +118,9 @@ bool RobotMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMax, float p
     else
     {
         float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
-        me->GetMotionMaster()->MoveCloserAndStop(0, chaseTarget, distanceInRange);
+        float nearX = 0, nearY = 0, nearZ = 0;
+        chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseTarget->GetAbsoluteAngle(me->GetPosition()));
+        me->GetMotionMaster()->MovePoint(0, nearX, nearY, nearZ, true, me->GetAbsoluteAngle(chaseTarget->GetPosition()));
     }
     return true;
 }
@@ -302,9 +304,9 @@ void RobotMovement::Update(uint32 pmDiff)
                 me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
             }
             float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
-            me->GetMotionMaster()->MoveCloserAndStop(0, chaseTarget, distanceInRange);
-            //chaseTarget->GetNearPoint(chaseTarget, pointTarget.x, pointTarget.y, pointTarget.z, 0, distanceInRange, me->GetAngle(chaseTarget));
-            //MovePoint(pointTarget.x, pointTarget.y, pointTarget.z);
+            float nearX = 0, nearY = 0, nearZ = 0;
+            chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseTarget->GetAbsoluteAngle(me->GetPosition()));
+            me->GetMotionMaster()->MovePoint(0, nearX, nearY, nearZ, true, me->GetAbsoluteAngle(chaseTarget->GetPosition()));
         }
         break;
     }
@@ -324,11 +326,14 @@ Script_Base::Script_Base(Player* pmMe)
     characterType = 0;
     petting = true;
 
-    chaseDistanceMin = MIN_DISTANCE_GAP;
-    chaseDistanceMax = MELEE_MIN_DISTANCE;
+    chaseDistanceMin = CHASE_MIN_DISTANCE;
+    chaseDistanceMax = CHASE_MAX_DISTANCE;
 
     rti = -1;
+}
 
+void Script_Base::Initialize()
+{
     spellLevelMap.clear();
     for (PlayerSpellMap::iterator it = me->GetSpellMap().begin(); it != me->GetSpellMap().end(); it++)
     {
@@ -549,7 +554,7 @@ bool Script_Base::Follow(Unit* pmTarget, float pmDistance)
     {
         return false;
     }
-    return rm->Chase(pmTarget, pmDistance);
+    return rm->Chase(pmTarget, pmDistance, 0.0f);
 }
 
 bool Script_Base::Chase(Unit* pmTarget, float pmMaxDistance, float pmMinDistance)

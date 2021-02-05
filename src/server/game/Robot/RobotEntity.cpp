@@ -161,6 +161,7 @@ void RobotEntity::Update(uint32 pmDiff)
                 sRobotManager->InitializeCharacter(me, target_level);
                 if (AI_Base* myAI = me->robotAI)
                 {
+                    myAI->sb->Initialize();
                     myAI->Reset();
                 }
                 entityState = RobotEntityState::RobotEntityState_Online;

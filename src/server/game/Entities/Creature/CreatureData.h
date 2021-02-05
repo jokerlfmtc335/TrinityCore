@@ -242,6 +242,33 @@ struct TC_GAME_API CreatureTemplate
     WorldPacket BuildQueryData(LocaleConstant loc) const;
 };
 
+// lfm creature_template_damage_azerothcore
+class CreatureTemplateDamageAzerothcore
+{
+public:
+    CreatureTemplateDamageAzerothcore()
+    {
+        entry = 0;
+        melee_min = 0;
+        melee_max = 0;
+        attack_power = 0;
+        range_min = 0;
+        range_max = 0;
+        range_attack_power = 0;
+        damageModifier = 0.0f;
+    }
+
+public:
+    uint32 entry;
+    uint32 melee_min;
+    uint32 melee_max;
+    uint32 attack_power;
+    uint32 range_min;
+    uint32 range_max;
+    uint32 range_attack_power;
+    float damageModifier;
+};
+
 #pragma pack(push, 1)
 
 // Defines base stats for creatures (used to calculate HP/mana/armor/attackpower/rangedattackpower/all damage).

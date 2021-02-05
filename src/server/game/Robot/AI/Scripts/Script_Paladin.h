@@ -43,6 +43,12 @@ enum PaladinJudgementType :uint32
     PaladinJudgementType_Justice = 2,
 };
 
+enum PaladinSealType :uint32
+{
+    PaladinSealType_Righteousness = 0,
+    PaladinSealType_Justice = 1,
+};
+
 class Script_Paladin :public Script_Base
 {
 public:    
@@ -64,12 +70,13 @@ public:
     uint32 auraType;
     uint32 blessingType;
     uint32 judgementType;
+    uint32 sealType;
 
     uint32 judgementDelay;
     uint32 consecrationDelay;
     uint32 hammerOfWrathDelay;
     uint32 righteousFuryDelay;
     uint32 hammerOfJusticeDelay;
-    uint32 sealOfRighteousnessDelay;
+    uint32 sealDelay;
 };
 #endif

@@ -22,7 +22,6 @@ public:
     virtual bool DPS();
     virtual bool Tank();
     virtual bool Tank(Unit* pmTarget);
-    virtual bool Pull(Unit* pmTarget);
     virtual bool Rest();
     virtual bool Heal();
     virtual bool Buff();

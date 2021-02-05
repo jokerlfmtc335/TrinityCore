@@ -100,23 +100,32 @@ void CreatureTextMgr::LoadCreatureTexts()
 
     uint32 textCount = 0;
 
+    // lfm creature_text_azerothcore
+    std::unordered_set<uint32> tcCreatureIDSet;
+
     do
     {
         Field* fields = result->Fetch();
         CreatureTextEntry temp;
+        temp.creatureId = fields[0].GetUInt32();
 
-        temp.creatureId      = fields[0].GetUInt32();
-        temp.groupId         = fields[1].GetUInt8();
-        temp.id              = fields[2].GetUInt8();
-        temp.text            = fields[3].GetString();
-        temp.type            = ChatMsg(fields[4].GetUInt8());
-        temp.lang            = Language(fields[5].GetUInt8());
-        temp.probability     = fields[6].GetFloat();
-        temp.emote           = Emote(fields[7].GetUInt32());
-        temp.duration        = fields[8].GetUInt32();
-        temp.sound           = fields[9].GetUInt32();
+        // lfm creature_text_azerothcore
+        if (tcCreatureIDSet.find(temp.creatureId) == tcCreatureIDSet.end())
+        {
+            tcCreatureIDSet.insert(temp.creatureId);
+        }
+
+        temp.groupId = fields[1].GetUInt8();
+        temp.id = fields[2].GetUInt8();
+        temp.text = fields[3].GetString();
+        temp.type = ChatMsg(fields[4].GetUInt8());
+        temp.lang = Language(fields[5].GetUInt8());
+        temp.probability = fields[6].GetFloat();
+        temp.emote = Emote(fields[7].GetUInt32());
+        temp.duration = fields[8].GetUInt32();
+        temp.sound = fields[9].GetUInt32();
         temp.BroadcastTextId = fields[10].GetUInt32();
-        temp.TextRange       = CreatureTextRange(fields[11].GetUInt8());
+        temp.TextRange = CreatureTextRange(fields[11].GetUInt8());
 
         if (temp.sound)
         {
@@ -167,10 +176,80 @@ void CreatureTextMgr::LoadCreatureTexts()
         mTextMap[temp.creatureId][temp.groupId].push_back(temp);
 
         ++textCount;
-    }
-    while (result->NextRow());
+    } while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded %u creature texts for " SZFMTD " creatures in %u ms", textCount, mTextMap.size(), GetMSTimeDiffToNow(oldMSTime));
+    // lfm creature_text_azerothcore
+    QueryResult qrCTA = WorldDatabase.Query("SELECT CreatureID, GroupID, ID, Text, Type, Language, Probability, Emote, Duration, Sound, BroadcastTextId, TextRange FROM creature_text_azerothcore");
+    if (qrCTA)
+    {
+        do
+        {
+            Field* fields = qrCTA->Fetch();
+            uint32 creatureID= fields[0].GetUInt32();
+            if (tcCreatureIDSet.find(creatureID) != tcCreatureIDSet.end())
+            {
+                continue;
+            }
+            CreatureTextEntry temp;
+            temp.creatureId = creatureID;
+            temp.groupId = fields[1].GetUInt8();
+            temp.id = fields[2].GetUInt8();
+            temp.text = fields[3].GetString();
+            temp.type = ChatMsg(fields[4].GetUInt8());
+            temp.lang = Language(fields[5].GetUInt8());
+            temp.probability = fields[6].GetFloat();
+            temp.emote = Emote(fields[7].GetUInt32());
+            temp.duration = fields[8].GetUInt32();
+            temp.sound = fields[9].GetUInt32();
+            temp.BroadcastTextId = fields[10].GetUInt32();
+            temp.TextRange = CreatureTextRange(fields[11].GetUInt8());
+            if (temp.sound)
+            {
+                if (!sSoundEntriesStore.LookupEntry(temp.sound))
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Sound %u but sound does not exist.", temp.creatureId, temp.groupId, temp.sound);
+                    temp.sound = 0;
+                }
+            }
+            if (!GetLanguageDescByID(temp.lang))
+            {
+                TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` using Language %u but Language does not exist.", temp.creatureId, temp.groupId, uint32(temp.lang));
+                temp.lang = LANG_UNIVERSAL;
+            }
+
+            if (temp.type >= MAX_CHAT_MSG_TYPE)
+            {
+                TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Type %u but this Chat Type does not exist.", temp.creatureId, temp.groupId, uint32(temp.type));
+                temp.type = CHAT_MSG_SAY;
+            }
+            if (temp.emote)
+            {
+                if (!sEmotesStore.LookupEntry(temp.emote))
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Emote %u but emote does not exist.", temp.creatureId, temp.groupId, uint32(temp.emote));
+                    temp.emote = EMOTE_ONESHOT_NONE;
+                }
+            }
+            if (temp.BroadcastTextId)
+            {
+                if (!sObjectMgr->GetBroadcastText(temp.BroadcastTextId))
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u, Id %u in table `creature_text` has non-existing or incompatible BroadcastTextId %u.", temp.creatureId, temp.groupId, temp.id, temp.BroadcastTextId);
+                    temp.BroadcastTextId = 0;
+                }
+            }
+            if (temp.TextRange > TEXT_RANGE_WORLD)
+            {
+                TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u, Id %u in table `creature_text` has incorrect TextRange %u.", temp.creatureId, temp.groupId, temp.id, temp.TextRange);
+                temp.TextRange = TEXT_RANGE_NORMAL;
+            }
+            // add the text into our entry's group
+            mTextMap[temp.creatureId][temp.groupId].push_back(temp);
+            ++textCount;
+        } while (qrCTA->NextRow());
+
+        TC_LOG_INFO("server.loading", ">> Loaded %u creature texts for " SZFMTD " creatures in %u ms", textCount, mTextMap.size(), GetMSTimeDiffToNow(oldMSTime));
+    }
 }
 
 void CreatureTextMgr::LoadCreatureTextLocales()

@@ -1473,6 +1473,29 @@ void Creature::UpdateLevelDependantStats()
     SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, stats->AttackPower);
     SetStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, stats->RangedAttackPower);
 
+    // lfm creature_template_damage_azerothcore
+    if (sObjectMgr->ctdaMap.find(cInfo->Entry) != sObjectMgr->ctdaMap.end())
+    {
+        if (CreatureTemplateDamageAzerothcore* ctda = sObjectMgr->ctdaMap[cInfo->Entry])
+        {
+            if (cInfo->Entry == 646)
+            {
+                bool breakPoint = true;
+            }
+            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, ctda->melee_min * 1000 / cInfo->BaseAttackTime);
+            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, ctda->melee_max * 1000 / cInfo->BaseAttackTime);
+
+            SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, ctda->melee_min * 1000 / cInfo->BaseAttackTime);
+            SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, ctda->melee_max * 1000 / cInfo->BaseAttackTime);
+
+            SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, ctda->range_min * 1000 / cInfo->RangeAttackTime);
+            SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, ctda->range_max * 1000 / cInfo->RangeAttackTime);
+
+            SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, ctda->attack_power);
+            SetStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, ctda->range_attack_power);
+        }
+    }
+
     float armor = (float)stats->GenerateArmor(cInfo); /// @todo Why is this treated as uint32 when it's a float?
     SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, armor);
 }

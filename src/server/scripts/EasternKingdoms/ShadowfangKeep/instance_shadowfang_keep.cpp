@@ -111,6 +111,25 @@ public:
             }
         }
 
+        // lfm shadownfang unit death
+        void OnUnitDeath(Unit* unit) override
+        {
+            if (Creature* creature = unit->ToCreature())
+            {
+                if (creature->GetSpawnId() == 16238)
+                {
+                    if (Creature* nandos = instance->GetCreatureBySpawnId(16237))
+                    {
+                        if (Player* raider = nandos->SelectNearestPlayer(45.0f))
+                        {
+                            nandos->AI()->Talk(0);
+                            nandos->EngageWithTarget(raider);
+                        }
+                    }
+                }
+            }
+        }
+
         void OnGameObjectCreate(GameObject* go) override
         {
             switch (go->GetEntry())

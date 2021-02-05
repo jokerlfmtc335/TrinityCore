@@ -554,77 +554,13 @@ bool AI_Base::DPS()
         }
         if (Group* myGroup = me->GetGroup())
         {
-            // icon first 
+            // icon only 
             if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
             {
                 if (sb->DPS(target, Chasing(), aoe))
                 {
                     return true;
                 }
-            }
-            // leader target 
-            if (Player* leader = ObjectAccessor::GetPlayer(*me, myGroup->GetLeaderGUID()))
-            {
-                if (Unit* target = leader->GetSelectedUnit())
-                {
-                    if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-                    {
-                        if (sb->DPS(target, Chasing(), aoe))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-            // my target 
-            if (Unit* target = me->GetSelectedUnit())
-            {
-                if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-                {
-                    if (sb->DPS(target, Chasing(), aoe))
-                    {
-                        return true;
-                    }
-                }
-            }
-            // lowest target 
-            Unit* lowestAttacker = NULL;
-            uint32 lowestHP = 0;
-            for (Unit::AttackerSet::const_iterator ait = me->getAttackers().begin(); ait != me->getAttackers().end(); ++ait)
-            {
-                if (Unit* eachAttacker = *ait)
-                {
-                    if (me->IsValidAttackTarget(eachAttacker))
-                    {
-                        if (eachAttacker->IsAlive())
-                        {
-                            if (me->GetDistance(eachAttacker) < ATTACK_RANGE_LIMIT)
-                            {
-                                if (myGroup->GetTargetIconByOG(eachAttacker->GetGUID()) == -1)
-                                {
-                                    uint32 eachHealth = eachAttacker->GetHealth();
-                                    if (!lowestAttacker)
-                                    {
-                                        lowestAttacker = eachAttacker;
-                                        lowestHP = eachHealth;
-                                    }
-                                    else
-                                    {
-                                        if (eachHealth < lowestHP)
-                                        {
-                                            lowestAttacker = eachAttacker;
-                                            lowestHP = eachHealth;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (sb->DPS(lowestAttacker, Chasing(), aoe))
-            {
-                return true;
             }
         }
     }
@@ -667,117 +603,39 @@ bool AI_Base::Tank()
                 }
             }
         }
-        // near ot 
-        for (Unit::AttackerSet::const_iterator ait = me->getAttackers().begin(); ait != me->getAttackers().end(); ++ait)
-        {
-            if (Unit* eachAttacker = *ait)
-            {
-                if (!eachAttacker->GetTarget().IsEmpty())
-                {
-                    if (eachAttacker->GetTarget() != me->GetGUID())
-                    {
-                        if (me->GetDistance(eachAttacker) < FOLLOW_MAX_DISTANCE)
-                        {
-                            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                            {
-                                if (Player* member = groupRef->GetSource())
-                                {
-                                    if (eachAttacker->GetTarget() == member->GetGUID())
-                                    {
-                                        if (sb->Tank(eachAttacker, Chasing(), aoe))
-                                        {
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // all ot 
-        for (Unit::AttackerSet::const_iterator ait = me->getAttackers().begin(); ait != me->getAttackers().end(); ++ait)
-        {
-            if (Unit* eachAttacker = *ait)
-            {
-                if (!eachAttacker->GetTarget().IsEmpty())
-                {
-                    if (eachAttacker->GetTarget() != me->GetGUID())
-                    {
-                        if (me->GetDistance(eachAttacker) < FOLLOW_MAX_DISTANCE)
-                        {
-                            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                            {
-                                if (Player* member = groupRef->GetSource())
-                                {
-                                    if (eachAttacker->GetTarget() == member->GetGUID())
-                                    {
-                                        if (sb->Tank(eachAttacker, Chasing(), aoe))
-                                        {
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // icon 
-        if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
-        {
-            if (sb->Tank(target, Chasing(), aoe))
-            {
-                return true;
-            }
-        }
-        // leader target 
-        if (Player* leader = ObjectAccessor::GetPlayer(*me, myGroup->GetLeaderGUID()))
-        {
-            if (Unit* target = leader->GetSelectedUnit())
-            {
-                if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-                {
-                    if (sb->Tank(target, Chasing(), aoe))
-                    {
-                        myGroup->SetTargetIcon(7, me->GetGUID(), target->GetGUID());
-                        return true;
-                    }
-                }
-            }
-        }
-        // my target 
-        if (Unit* target = me->GetSelectedUnit())
-        {
-            if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-            {
-                if (sb->Tank(target, Chasing(), aoe))
-                {
-                    myGroup->SetTargetIcon(7, me->GetGUID(), target->GetGUID());
-                    return true;
-                }
-            }
-        }
-        // nearest 
+        // ot 
         Unit* nearestAttacker = nullptr;
         float nearestDistance = ATTACK_RANGE_LIMIT;
-        for (Unit::AttackerSet::const_iterator ait = me->getAttackers().begin(); ait != me->getAttackers().end(); ++ait)
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
         {
-            if (Unit* eachAttacker = *ait)
+            if (Player* member = groupRef->GetSource())
             {
-                if (eachAttacker->IsAlive())
+                if (member->IsAlive())
                 {
-                    if (me->IsValidAttackTarget(eachAttacker))
+                    for (Unit::AttackerSet::const_iterator ait = member->getAttackers().begin(); ait != member->getAttackers().end(); ++ait)
                     {
-                        float eachDistance = me->GetDistance(eachAttacker);
-                        if (eachDistance < nearestDistance)
+                        if (Unit* eachAttacker = *ait)
                         {
-                            if (myGroup->GetTargetIconByOG(eachAttacker->GetGUID()) == -1)
+                            if (eachAttacker->IsAlive())
                             {
-                                nearestDistance = eachDistance;
-                                nearestAttacker = eachAttacker;
+                                if (me->IsValidAttackTarget(eachAttacker))
+                                {
+                                    if (!eachAttacker->GetTarget().IsEmpty())
+                                    {
+                                        if (eachAttacker->GetTarget() != me->GetGUID())
+                                        {
+                                            float eachDistance = me->GetDistance(eachAttacker);
+                                            if (eachDistance < nearestDistance)
+                                            {
+                                                if (myGroup->GetTargetIconByOG(eachAttacker->GetGUID()) == -1)
+                                                {
+                                                    nearestDistance = eachDistance;
+                                                    nearestAttacker = eachAttacker;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -789,6 +647,14 @@ bool AI_Base::Tank()
             if (sb->Tank(nearestAttacker, Chasing(), aoe))
             {
                 myGroup->SetTargetIcon(7, me->GetGUID(), nearestAttacker->GetGUID());
+                return true;
+            }
+        }
+        // icon 
+        if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
+        {
+            if (sb->Tank(target, Chasing(), aoe))
+            {
                 return true;
             }
         }
@@ -808,27 +674,6 @@ bool AI_Base::Tank(Unit* pmTarget)
     case GroupRole::GroupRole_Tank:
     {
         return sb->Tank(pmTarget, Chasing(), aoe);
-    }
-    default:
-    {
-        break;
-    }
-    }
-
-    return false;
-}
-
-bool AI_Base::Pull(Unit* pmTarget)
-{
-    if (!me)
-    {
-        return false;
-    }
-    switch (groupRole)
-    {
-    case GroupRole::GroupRole_Tank:
-    {
-        return sb->Pull(pmTarget);
     }
     default:
     {
@@ -886,59 +731,30 @@ bool AI_Base::Heal()
     }
     if (Group* myGroup = me->GetGroup())
     {
-        if (cure)
+        std::unordered_map<uint32, Player*> lowMemberMap;
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
         {
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            if (Player* member = groupRef->GetSource())
             {
-                if (Player* member = groupRef->GetSource())
+                if (me->GetDistance(member) < HEAL_MAX_DISTANCE)
                 {
-                    if (member->IsAlive())
+                    if (cure)
                     {
                         if (sb->Cure(member))
                         {
                             return true;
                         }
                     }
-                }
-            }
-        }
-        Player* mainTank = ObjectAccessor::GetPlayer(*me, myGroup->GetOGByTargetIcon(6));
-        if (!mainTank)
-        {
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                if (Player* member = groupRef->GetSource())
-                {
-                    if (member->IsAlive())
+                    if (member->robotAI->groupRole == GroupRole::GroupRole_Tank)
                     {
-                        if (AI_Base* memberAI = member->robotAI)
+                        if (sb->Heal(member))
                         {
-                            if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                            {
-                                mainTank = member;
-                            }
+                            return true;
                         }
                     }
-                }
-            }
-        }
-        if (mainTank)
-        {
-            if (sb->Heal(mainTank))
-            {
-                return true;
-            }
-        }
-        std::unordered_map<uint32, Player*> lowMemberMap;
-        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-        {
-            if (Player* member = groupRef->GetSource())
-            {
-                if (member->IsAlive())
-                {
-                    if (member->GetHealthPct() < 50.0f)
+                    if (member->IsAlive())
                     {
-                        if (me->GetDistance(member) < HEAL_MAX_DISTANCE)
+                        if (member->GetHealthPct() < 50.0f)
                         {
                             lowMemberMap[lowMemberMap.size()] = member;
                         }
@@ -1012,34 +828,7 @@ bool AI_Base::Follow()
     }
     if (Group* myGroup = me->GetGroup())
     {
-        Player* mainTank = ObjectAccessor::GetPlayer(*me, myGroup->GetOGByTargetIcon(6));
-        if (!mainTank)
-        {
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                if (Player* member = groupRef->GetSource())
-                {
-                    if (member->IsAlive())
-                    {
-                        if (AI_Base* memberAI = member->robotAI)
-                        {
-                            if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                            {
-                                mainTank = member;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (mainTank)
-        {
-            if (sb->Follow(mainTank, followDistance))
-            {
-                return true;
-            }
-        }
-        if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+        if (Player* leader = ObjectAccessor::GetPlayer(*me, myGroup->GetLeaderGUID()))
         {
             if (sb->Follow(leader, followDistance))
             {

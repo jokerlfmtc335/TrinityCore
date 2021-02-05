@@ -16,7 +16,7 @@
 #endif
 
 #ifndef MIN_DISTANCE_GAP
-# define MIN_DISTANCE_GAP 0.5f
+# define MIN_DISTANCE_GAP 0.2f
 #endif
 
 #ifndef FOLLOW_MIN_DISTANCE
@@ -52,7 +52,7 @@
 #endif
 
 #ifndef CHASE_MAX_DISTANCE
-# define CHASE_MAX_DISTANCE 1.0f
+# define CHASE_MAX_DISTANCE 0.5f
 #endif
 
 #ifndef RANGED_NORMAL_DISTANCE

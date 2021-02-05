@@ -84,6 +84,13 @@ public:
                 case NPC_LORGUS_JETT:
                     creature->SetHomePosition(LorgusPosition[urand(0, 3)]);
                     break;
+                    // lfm Thaelrid
+                case 4787:
+                {
+                    creature->SetImmuneToAll(true);
+                    creature->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SIT);
+                    break;
+                }
             }
         }
 

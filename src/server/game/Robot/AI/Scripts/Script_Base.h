@@ -24,7 +24,7 @@ public:
 	void ResetMovement();
 	void Update(uint32 pmDiff);
 
-	bool Chase(Unit* pmChaseTarget, float pmChaseDistanceMax = FOLLOW_MAX_DISTANCE, float pmChaseDistanceMin = 0.0f, uint32 pmLimitDelay = DEFAULT_MOVEMENT_LIMIT_DELAY);
+	bool Chase(Unit* pmChaseTarget, float pmChaseDistanceMax, float pmChaseDistanceMin, uint32 pmLimitDelay = DEFAULT_MOVEMENT_LIMIT_DELAY);
 	void MovePosition(Position pmTargetPosition, uint32 pmLimitDelay = DEFAULT_MOVEMENT_LIMIT_DELAY);
 	void MovePosition(float pmX, float pmY, float pmZ, uint32 pmLimitDelay = DEFAULT_MOVEMENT_LIMIT_DELAY);
 	void MovePoint(float pmX, float pmY, float pmZ);
@@ -42,6 +42,7 @@ class Script_Base
 {
 public:
 	Script_Base(Player* pmMe);
+    void Initialize();
 	virtual void Reset();
 	virtual bool DPS(Unit* pmTarget, bool pmChase = true, bool pmAOE = false);
 	virtual bool Tank(Unit* pmTarget, bool pmChase, bool pmAOE = false);
