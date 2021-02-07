@@ -1478,10 +1478,6 @@ void Creature::UpdateLevelDependantStats()
     {
         if (CreatureTemplateDamageAzerothcore* ctda = sObjectMgr->ctdaMap[cInfo->Entry])
         {
-            if (cInfo->Entry == 646)
-            {
-                bool breakPoint = true;
-            }
             SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, ctda->melee_min * 1000 / cInfo->BaseAttackTime);
             SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, ctda->melee_max * 1000 / cInfo->BaseAttackTime);
 
