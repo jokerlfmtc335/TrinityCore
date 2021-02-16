@@ -66,6 +66,24 @@ class instance_scarlet_monastery : public InstanceMapScript
                 _horsemanState = NOT_STARTED;
             }
 
+            // lfm on create 
+            void OnCreatureCreate(Creature* creature) override
+            {
+                switch (creature->GetEntry())
+                {
+                case 3981:
+                {
+                    creature->SetImmuneToAll(true);
+                    break;
+                }
+                case 6547:
+                {
+                    creature->SetImmuneToAll(true);
+                    break;
+                }
+                }
+            }
+
             void HandleStartEvent()
             {
                 _horsemanState = IN_PROGRESS;

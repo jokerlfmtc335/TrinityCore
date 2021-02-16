@@ -4329,8 +4329,12 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
         if (!m_preGeneratedPath)
         {
             //unitTarget->GetContactPoint(m_caster, pos.m_positionX, pos.m_positionY, pos.m_positionZ);
-            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
-            unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
+            // lfm charge distance fix 
+            //Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
+            //unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
+            float x = 0.0f, y = 0.0f, z = 0.0f;
+            unitTarget->GetNearPoint(unitCaster, x, y, z, DEFAULT_PLAYER_COMBAT_REACH, unitTarget->GetAbsoluteAngle(unitCaster->GetPosition()));
+            unitCaster->GetMotionMaster()->MoveCharge(x, y, z, speed);
         }
         else
             unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
@@ -4340,7 +4344,12 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
     {
         // not all charge effects used in negative spells
         if (!m_spellInfo->IsPositive() && m_caster->GetTypeId() == TYPEID_PLAYER)
+        {
             unitCaster->Attack(unitTarget, true);
+            // lfm charge attack timer 
+            unitCaster->setAttackTimer(WeaponAttackType::BASE_ATTACK, 900);
+            unitCaster->setAttackTimer(WeaponAttackType::OFF_ATTACK, 900);
+        }
     }
 }
 

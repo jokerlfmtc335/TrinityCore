@@ -1385,6 +1385,42 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
         }
         sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
     }
+    else if (commandName == "leader")
+    {
+        if (Group* myGroup = pmPlayer->GetGroup())
+        {
+            if (myGroup->GetLeaderGUID() != pmPlayer->GetGUID())
+            {
+                bool change = true;
+                if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+                {
+                    if (WorldSession* leaderSession = leader->GetSession())
+                    {
+                        if (!leaderSession->isRobotSession)
+                        {
+                            change = false;
+                        }
+                    }
+                }
+                if (change)
+                {
+                    myGroup->ChangeLeader(pmPlayer->GetGUID());
+                }
+                else
+                {
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmPlayer);
+                }
+            }
+            else
+            {
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmPlayer);
+            }
+        }
+        else
+        {
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmPlayer);
+        }
+    }
     else if (commandName == "robot")
     {
         if (commandVector.size() > 1)
@@ -1421,7 +1457,8 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
             }
             else if (robotAction == "online")
             {
-                if (pmPlayer->GetLevel() < 10)
+                uint32 playerLevel = pmPlayer->GetLevel();
+                if (playerLevel < 10)
                 {
                     std::ostringstream replyStream;
                     replyStream << "You level is too low";
@@ -1437,7 +1474,6 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                     std::ostringstream replyTitleStream;
                     replyTitleStream << "Robot count to go online : " << robotCount;
                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
-                    uint32 playerLevel = pmPlayer->GetLevel();
                     // current count 
                     uint32 currentCount = 0;
                     QueryResult levelRobotQR = CharacterDatabase.PQuery("SELECT count(*) FROM robot where target_level = %d", playerLevel);
@@ -1469,9 +1505,9 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                 sLog->outMessage("lfm", LogLevel::LOG_LEVEL_INFO, "Account %s exists, try again", checkAccountName);
                                 checkNumber++;
                             }
-
+                            uint32 robotID = playerLevel * 10000 + checkNumber;
                             std::ostringstream sqlStream;
-                            sqlStream << "INSERT INTO robot (robot_id, account_name, character_id, target_level, robot_type) VALUES (" << checkNumber << ", '" << checkAccountName << "', 0, " << playerLevel << ", 0)";
+                            sqlStream << "INSERT INTO robot (robot_id, account_name, character_id, target_level, robot_type) VALUES (" << robotID << ", '" << checkAccountName << "', 0, " << playerLevel << ", 0)";
                             std::string sql = sqlStream.str();
                             CharacterDatabase.DirectExecute(sql.c_str());
                             std::ostringstream replyStream;
@@ -1728,10 +1764,901 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
         {
             if (receiverSession->isRobotSession)
             {
-                if (commandName == "who")
+                if (AI_Base* receiverAI = pmReceiver->robotAI)
                 {
-                    int whoTab = pmReceiver->GetMaxTalentCountTab();
-                    WhisperTo(pmSender, characterTalentTabNameMap[pmReceiver->GetClass()][whoTab], Language::LANG_UNIVERSAL, pmReceiver);
+#pragma region command handling
+                    if (commandName == "role")
+                    {
+                        std::ostringstream replyStream;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string newRole = commandVector.at(1);
+                            receiverAI->SetGroupRole(newRole);
+                        }
+                        replyStream << "My group role is ";
+                        replyStream << receiverAI->GetGroupRoleName();
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "engage")
+                    {
+                        receiverAI->staying = false;
+                        if (Unit* target = pmSender->GetSelectedUnit())
+                        {
+                            if (receiverAI->Engage(target))
+                            {
+                                if (Group* myGroup = pmReceiver->GetGroup())
+                                {
+                                    if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
+                                    {
+                                        myGroup->SetTargetIcon(7, pmReceiver->GetGUID(), target->GetGUID());
+                                    }
+                                }
+                                receiverAI->engageTarget = target;
+                                int engageDelay = 5000;
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string checkStr = commandVector.at(1);
+                                    engageDelay = atoi(checkStr.c_str());
+                                }
+                                receiverAI->engageDelay = engageDelay;
+                                std::ostringstream replyStream;
+                                replyStream << "Try to engage " << target->GetName();
+                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                            }
+                        }
+                    }
+                    else if (commandName == "tank")
+                    {
+                        if (Unit* target = pmSender->GetSelectedUnit())
+                        {
+                            if (receiverAI->groupRole == GroupRole::GroupRole_Tank)
+                            {
+                                if (receiverAI->Tank(target))
+                                {
+                                    if (Group* myGroup = pmReceiver->GetGroup())
+                                    {
+                                        if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
+                                        {
+                                            myGroup->SetTargetIcon(7, pmReceiver->GetGUID(), target->GetGUID());
+                                        }
+                                    }
+                                    receiverAI->staying = false;
+                                    receiverAI->engageTarget = target;
+                                    int engageDelay = 5000;
+                                    if (commandVector.size() > 1)
+                                    {
+                                        std::string checkStr = commandVector.at(1);
+                                        engageDelay = atoi(checkStr.c_str());
+                                    }
+                                    receiverAI->engageDelay = engageDelay;
+                                    std::ostringstream replyStream;
+                                    replyStream << "Try to tank " << target->GetName();
+                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                                }
+                            }
+                            else
+                            {
+                                receiverAI->staying = false;
+                            }
+                        }
+                    }
+                    else if (commandName == "revive")
+                    {
+                        if (pmReceiver->IsAlive())
+                        {
+                            std::unordered_map<uint32, Player*> deadMap;
+                            std::unordered_map<uint32, Player*> targetingMap;
+                            if (Group* myGroup = pmReceiver->GetGroup())
+                            {
+                                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                                {
+                                    if (Player* member = groupRef->GetSource())
+                                    {
+                                        if (!member->IsAlive())
+                                        {
+                                            deadMap[member->GetGUID().GetCounter()] = member;
+                                        }
+                                        else
+                                        {
+                                            if (Spell* currentSpell = member->GetCurrentSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL))
+                                            {
+                                                if (Unit* targetUnit = currentSpell->m_targets.GetUnitTarget())
+                                                {
+                                                    if (Player* targetPlayer = targetUnit->ToPlayer())
+                                                    {
+                                                        targetingMap[targetPlayer->GetGUID().GetCounter()] = targetPlayer;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (deadMap.size() > 0)
+                            {
+                                for (std::unordered_map<uint32, Player*>::iterator dIT = deadMap.begin(); dIT != deadMap.end(); dIT++)
+                                {
+                                    if (Player* eachDead = dIT->second)
+                                    {
+                                        if (targetingMap.find(eachDead->GetGUID().GetCounter()) == targetingMap.end())
+                                        {
+                                            std::ostringstream reviveSpellName;
+                                            if (pmReceiver->GetClass() == Classes::CLASS_DRUID || pmReceiver->GetClass() == Classes::CLASS_PRIEST || pmReceiver->GetClass() == Classes::CLASS_PALADIN || pmReceiver->GetClass() == Classes::CLASS_SHAMAN)
+                                            {
+                                                if (pmReceiver->GetClass() == Classes::CLASS_PRIEST)
+                                                {
+                                                    reviveSpellName << "Resurrection";
+                                                }
+                                                else if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
+                                                {
+                                                    reviveSpellName << "Redemption";
+                                                }
+                                                else if (pmReceiver->GetClass() == Classes::CLASS_SHAMAN)
+                                                {
+                                                    reviveSpellName << "Ancestral Spirit";
+                                                }
+                                                if (receiverAI->sb->CastSpell(eachDead, reviveSpellName.str(), RANGED_MAX_DISTANCE, false, false, true))
+                                                {
+                                                    std::ostringstream replyStream;
+                                                    replyStream << "Reviving " << eachDead->GetName();
+                                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (commandName == "follow")
+                    {
+                        std::ostringstream replyStream;
+                        bool takeAction = true;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string cmdDistanceStr = commandVector.at(1);
+                            float cmdDistance = atof(cmdDistanceStr.c_str());
+                            if (cmdDistance == 0.0f)
+                            {
+                                receiverAI->following = false;
+                                replyStream << "Stop following";
+                                takeAction = false;
+                            }
+                            else if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE)
+                            {
+                                receiverAI->followDistance = cmdDistance;
+                                replyStream << "Distance updated";
+                            }
+                            else
+                            {
+                                replyStream << "Distance is not valid";
+                                takeAction = false;
+                            }
+                        }
+                        if (takeAction)
+                        {
+                            receiverAI->eatDelay = 0;
+                            receiverAI->drinkDelay = 0;
+                            receiverAI->staying = false;
+                            receiverAI->holding = false;
+                            receiverAI->following = true;
+                            if (receiverAI->Follow())
+                            {
+                                replyStream << "Following " << receiverAI->followDistance;
+                            }
+                            else
+                            {
+                                replyStream << "can not follow";
+                            }
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "stay")
+                    {
+                        std::string targetGroupRole = "";
+                        if (commandVector.size() > 1)
+                        {
+                            targetGroupRole = commandVector.at(1);
+                        }
+                        if (receiverAI->Stay(targetGroupRole))
+                        {
+                            WhisperTo(pmSender, "Staying", Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "hold")
+                    {
+                        std::string targetGroupRole = "";
+                        if (commandVector.size() > 1)
+                        {
+                            targetGroupRole = commandVector.at(1);
+                        }
+                        if (receiverAI->Hold(targetGroupRole))
+                        {
+                            WhisperTo(pmReceiver, "Holding", Language::LANG_UNIVERSAL, pmSender);
+                        }
+                    }
+                    else if (commandName == "rest")
+                    {
+                        std::ostringstream replyStream;
+                        if (receiverAI->sb->Eat())
+                        {
+                            receiverAI->eatDelay = DEFAULT_REST_DELAY;
+                            receiverAI->drinkDelay = 1000;
+                            replyStream << "Resting";
+                        }
+                        else
+                        {
+                            replyStream << "Can not rest";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "who")
+                    {
+                        int whoTab = pmReceiver->GetMaxTalentCountTab();
+                        WhisperTo(pmSender, characterTalentTabNameMap[pmReceiver->GetClass()][whoTab], Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "assemble")
+                    {
+                        std::ostringstream replyStream;
+                        if (receiverAI->moveDelay > 0 || receiverAI->teleportAssembleDelay > 0)
+                        {
+                            replyStream << "I am on the way";
+                        }
+                        else
+                        {
+                            if (pmReceiver->IsAlive())
+                            {
+                                if (pmReceiver->GetDistance(pmSender) < ATTACK_RANGE_LIMIT)
+                                {
+                                    pmReceiver->GetMotionMaster()->Clear();
+                                    pmReceiver->StopMoving();
+                                    receiverAI->eatDelay = 0;
+                                    receiverAI->drinkDelay = 0;
+                                    receiverAI->sb->rm->MovePosition(pmSender->GetPosition());
+                                    replyStream << "We are close, I will move to you";
+                                    receiverAI->moveDelay = 3000;
+                                }
+                                else
+                                {
+                                    receiverAI->teleportAssembleDelay = urand(30 * TimeConstants::IN_MILLISECONDS, 1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                                    replyStream << "I will join you in " << receiverAI->teleportAssembleDelay << " ms";
+                                }
+                            }
+                            else
+                            {
+                                receiverAI->teleportAssembleDelay = urand(1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 2 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                                replyStream << "I will revive and join you in " << receiverAI->teleportAssembleDelay << " ms";
+                            }
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "cast")
+                    {
+                        std::ostringstream replyStream;
+                        if (pmReceiver->IsAlive())
+                        {
+                            if (commandVector.size() > 1)
+                            {
+                                std::ostringstream targetStream;
+                                uint8 arrayCount = 0;
+                                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
+                                {
+                                    if (arrayCount > 0)
+                                    {
+                                        targetStream << (*it) << " ";
+                                    }
+                                    arrayCount++;
+                                }
+                                std::string spellName = TrimString(targetStream.str());
+                                Unit* senderTarget = pmSender->GetSelectedUnit();
+                                if (!senderTarget)
+                                {
+                                    senderTarget = pmReceiver;
+                                }
+                                if (receiverAI->sb->CastSpell(senderTarget, spellName, VISIBILITY_DISTANCE_NORMAL))
+                                {
+                                    replyStream << "Cast spell " << spellName << " on " << senderTarget->GetName();
+                                }
+                                else
+                                {
+                                    replyStream << "Can not cast spell " << spellName << " on " << senderTarget->GetName();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            replyStream << "I am dead";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "cancel")
+                    {
+                        std::ostringstream replyStream;
+                        if (pmReceiver->IsAlive())
+                        {
+                            if (commandVector.size() > 1)
+                            {
+                                std::ostringstream targetStream;
+                                uint8 arrayCount = 0;
+                                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
+                                {
+                                    if (arrayCount > 0)
+                                    {
+                                        targetStream << (*it) << " ";
+                                    }
+                                    arrayCount++;
+                                }
+                                std::string spellName = TrimString(targetStream.str());
+                                if (receiverAI->sb->CancelAura(spellName))
+                                {
+                                    replyStream << "Aura canceled " << spellName;
+                                }
+                                else
+                                {
+                                    replyStream << "Can not cancel aura " << spellName;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            replyStream << "I am dead";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "use")
+                    {
+                        std::ostringstream replyStream;
+                        if (pmReceiver->IsAlive())
+                        {
+                            if (commandVector.size() > 1)
+                            {
+                                std::string useType = commandVector.at(1);
+                                if (useType == "go")
+                                {
+                                    if (commandVector.size() > 2)
+                                    {
+                                        std::ostringstream goNameStream;
+                                        uint32 checkPos = 2;
+                                        while (checkPos < commandVector.size())
+                                        {
+                                            goNameStream << commandVector.at(checkPos) << " ";
+                                            checkPos++;
+                                        }
+                                        std::string goName = TrimString(goNameStream.str());
+                                        bool validToUse = false;
+                                        std::list<GameObject*> nearGOList;
+                                        pmReceiver->GetGameObjectListWithEntryInGrid(nearGOList, 0, MELEE_MAX_DISTANCE);
+                                        for (std::list<GameObject*>::iterator it = nearGOList.begin(); it != nearGOList.end(); it++)
+                                        {
+                                            if ((*it)->GetName() == goName)
+                                            {
+                                                pmReceiver->SetFacingToObject((*it));
+                                                pmReceiver->StopMoving();
+                                                pmReceiver->GetMotionMaster()->Clear();
+                                                (*it)->Use(pmReceiver);
+                                                replyStream << "Use game object : " << goName;
+                                                validToUse = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!validToUse)
+                                        {
+                                            replyStream << "No go with name " << goName << " nearby";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        replyStream << "No go name";
+                                    }
+                                }
+                                else if (useType == "item")
+                                {
+
+                                }
+                                else
+                                {
+                                    replyStream << "Unknown type";
+                                }
+                            }
+                            else
+                            {
+                                replyStream << "Use what?";
+                            }
+                        }
+                        else
+                        {
+                            replyStream << "I am dead";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "stop")
+                    {
+                        std::ostringstream replyStream;
+                        if (pmReceiver->IsAlive())
+                        {
+                            pmReceiver->StopMoving();
+                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
+                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                            replyStream << "Stopped";
+                        }
+                        else
+                        {
+                            replyStream << "I am dead";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "delay")
+                    {
+                        std::ostringstream replyStream;
+                        if (commandVector.size() > 1)
+                        {
+                            int delayMS = std::stoi(commandVector.at(1));
+                            receiverAI->dpsDelay = delayMS;
+                            replyStream << "DPS delay set to : " << delayMS;
+                        }
+                        else
+                        {
+                            replyStream << "DPS delay is : " << receiverAI->dpsDelay;
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "threat")
+                    {
+                        std::ostringstream replyStream;
+                        if (pmReceiver->IsAlive())
+                        {
+                            replyStream << "Threat list : ";
+                            for (ThreatReference const* ref : pmReceiver->GetThreatManager().GetUnsortedThreatList())
+                            {
+                                replyStream << ref->GetOwner()->GetName() << ", ";
+                            }
+                        }
+                        else
+                        {
+                            replyStream << "I am dead";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "cure")
+                    {
+                        std::ostringstream replyStream;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string cureCMD = commandVector.at(1);
+                            if (cureCMD == "on")
+                            {
+                                receiverAI->cure = true;
+                            }
+                            else if (cureCMD == "off")
+                            {
+                                receiverAI->cure = false;
+                            }
+                            else
+                            {
+                                replyStream << "Unknown state";
+                            }
+                        }
+                        if (receiverAI->cure)
+                        {
+                            replyStream << "Auto cure is on";
+                        }
+                        else
+                        {
+                            replyStream << "Auto cure is off";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "aoe")
+                    {
+                        std::ostringstream replyStream;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string on = commandVector.at(1);
+                            if (on == "on")
+                            {
+                                receiverAI->aoe = true;
+                            }
+                            else if (on == "off")
+                            {
+                                receiverAI->aoe = false;
+                            }
+                        }
+                        if (receiverAI->aoe)
+                        {
+                            replyStream << "AOE is on";
+                        }
+                        else
+                        {
+                            replyStream << "AOE is off";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "emote")
+                    {
+                        if (pmReceiver->IsAlive())
+                        {
+                            if (commandVector.size() > 1)
+                            {
+                                int emoteCMD = std::stoi(commandVector.at(1));
+                                pmReceiver->HandleEmoteCommand((Emote)emoteCMD);
+                            }
+                            else
+                            {
+                                pmReceiver->AttackStop();
+                                pmReceiver->CombatStop();
+                            }
+                        }
+                        else
+                        {
+                            WhisperTo(pmSender, "I am dead", Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "pa")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string auratypeName = commandVector.at(1);
+                                    if (auratypeName == "concentration")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
+                                    }
+                                    else if (auratypeName == "devotion")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
+                                    }
+                                    else if (auratypeName == "retribution")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
+                                    }
+                                    else if (auratypeName == "fire")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
+                                    }
+                                    else if (auratypeName == "frost")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
+                                    }
+                                    else if (auratypeName == "shadow")
+                                    {
+                                        sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (sp->auraType)
+                                {
+                                case PaladinAuraType::PaladinAuraType_Concentration:
+                                {
+                                    replyStream << "concentration";
+                                    break;
+                                }
+                                case PaladinAuraType::PaladinAuraType_Devotion:
+                                {
+                                    replyStream << "devotion";
+                                    break;
+                                }
+                                case PaladinAuraType::PaladinAuraType_Retribution:
+                                {
+                                    replyStream << "retribution";
+                                    break;
+                                }
+                                case PaladinAuraType::PaladinAuraType_FireResistant:
+                                {
+                                    replyStream << "fire";
+                                    break;
+                                }
+                                case PaladinAuraType::PaladinAuraType_FrostResistant:
+                                {
+                                    replyStream << "frost";
+                                    break;
+                                }
+                                case PaladinAuraType::PaladinAuraType_ShadowResistant:
+                                {
+                                    replyStream << "shadow";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "pj")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string auratypeName = commandVector.at(1);
+                                    if (auratypeName == "justice")
+                                    {
+                                        sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
+                                    }
+                                    else if (auratypeName == "wisdom")
+                                    {
+                                        sp->judgementType = PaladinJudgementType::PaladinJudgementType_Wisdom;
+                                    }
+                                    else if (auratypeName == "light")
+                                    {
+                                        sp->judgementType = PaladinJudgementType::PaladinJudgementType_Light;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (sp->judgementType)
+                                {
+                                case PaladinJudgementType::PaladinJudgementType_Justice:
+                                {
+                                    replyStream << "justice";
+                                    break;
+                                }
+                                case PaladinJudgementType::PaladinJudgementType_Wisdom:
+                                {
+                                    replyStream << "wisdom";
+                                    break;
+                                }
+                                case PaladinJudgementType::PaladinJudgementType_Light:
+                                {
+                                    replyStream << "light";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "pb")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string blessingTypeName = commandVector.at(1);
+                                    if (blessingTypeName == "kings")
+                                    {
+                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+                                    }
+                                    else if (blessingTypeName == "might")
+                                    {
+                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
+                                    }
+                                    else if (blessingTypeName == "wisdom")
+                                    {
+                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (sp->blessingType)
+                                {
+                                case PaladinBlessingType::PaladinBlessingType_Kings:
+                                {
+                                    replyStream << "kings";
+                                    break;
+                                }
+                                case PaladinBlessingType::PaladinBlessingType_Might:
+                                {
+                                    replyStream << "might";
+                                    break;
+                                }
+                                case PaladinBlessingType::PaladinBlessingType_Wisdom:
+                                {
+                                    replyStream << "wisdom";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "ps")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string sealTypeName = commandVector.at(1);
+                                    if (sealTypeName == "righteousness")
+                                    {
+                                        sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
+                                    }
+                                    else if (sealTypeName == "justice")
+                                    {
+                                        sp->sealType = PaladinSealType::PaladinSealType_Justice;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (sp->sealType)
+                                {
+                                case PaladinSealType::PaladinSealType_Righteousness:
+                                {
+                                    replyStream << "righteousness";
+                                    break;
+                                }
+                                case PaladinSealType::PaladinSealType_Justice:
+                                {
+                                    replyStream << "justice";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "ha")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_HUNTER)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Hunter* sh = (Script_Hunter*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string aspectName = commandVector.at(1);
+                                    if (aspectName == "hawk")
+                                    {
+                                        sh->aspectType = HunterAspectType::HunterAspectType_Hawk;
+                                    }
+                                    else if (aspectName == "monkey")
+                                    {
+                                        sh->aspectType = HunterAspectType::HunterAspectType_Monkey;
+                                    }
+                                    else if (aspectName == "wild")
+                                    {
+                                        sh->aspectType = HunterAspectType::HunterAspectType_Wild;
+                                    }
+                                    else if (aspectName == "pack")
+                                    {
+                                        sh->aspectType = HunterAspectType::HunterAspectType_Pack;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (sh->aspectType)
+                                {
+                                case HunterAspectType::HunterAspectType_Hawk:
+                                {
+                                    replyStream << "hawk";
+                                    break;
+                                }
+                                case HunterAspectType::HunterAspectType_Monkey:
+                                {
+                                    replyStream << "monkey";
+                                    break;
+                                }
+                                case HunterAspectType::HunterAspectType_Wild:
+                                {
+                                    replyStream << "wild";
+                                    break;
+                                }
+                                case HunterAspectType::HunterAspectType_Pack:
+                                {
+                                    replyStream << "pack";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+                    else if (commandName == "equip")
+                    {
+                        if (commandVector.size() > 1)
+                        {
+                            std::string equipType = commandVector.at(1);
+                            if (equipType == "molten core")
+                            {
+                                if (pmReceiver->GetClass() == Classes::CLASS_DRUID)
+                                {
+                                    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
+                                    {
+                                        if (Item* currentEquip = pmReceiver->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+                                        {
+                                            pmReceiver->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                                        }
+                                    }
+                                    EquipNewItem(pmReceiver, 16983, EquipmentSlots::EQUIPMENT_SLOT_HEAD);
+                                    EquipNewItem(pmReceiver, 19139, EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS);
+                                    EquipNewItem(pmReceiver, 16833, EquipmentSlots::EQUIPMENT_SLOT_CHEST);
+                                    EquipNewItem(pmReceiver, 11764, EquipmentSlots::EQUIPMENT_SLOT_WRISTS);
+                                    EquipNewItem(pmReceiver, 16831, EquipmentSlots::EQUIPMENT_SLOT_HANDS);
+                                    EquipNewItem(pmReceiver, 19149, EquipmentSlots::EQUIPMENT_SLOT_WAIST);
+                                    EquipNewItem(pmReceiver, 15054, EquipmentSlots::EQUIPMENT_SLOT_LEGS);
+                                    EquipNewItem(pmReceiver, 16982, EquipmentSlots::EQUIPMENT_SLOT_FEET);
+                                    EquipNewItem(pmReceiver, 18803, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND);
+                                    EquipNewItem(pmReceiver, 2802, EquipmentSlots::EQUIPMENT_SLOT_TRINKET1);
+                                    EquipNewItem(pmReceiver, 18406, EquipmentSlots::EQUIPMENT_SLOT_TRINKET2);
+                                    EquipNewItem(pmReceiver, 18398, EquipmentSlots::EQUIPMENT_SLOT_FINGER1);
+                                    EquipNewItem(pmReceiver, 18813, EquipmentSlots::EQUIPMENT_SLOT_FINGER2);
+                                    EquipNewItem(pmReceiver, 18811, EquipmentSlots::EQUIPMENT_SLOT_BACK);
+                                    EquipNewItem(pmReceiver, 16309, EquipmentSlots::EQUIPMENT_SLOT_NECK);
+                                    std::ostringstream replyStream;
+                                    replyStream << "Equip all fire resistance gears.";
+                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                                }
+                            }
+                            else if (equipType == "reset")
+                            {
+                                InitializeEquipments(pmReceiver, true);
+                                std::ostringstream replyStream;
+                                replyStream << "All my equipments are reset.";
+                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                            }
+                        }
+                    }
+                    else if (commandName == "rti")
+                    {
+                        int targetIcon = -1;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string iconIndex = commandVector.at(1);
+                            targetIcon = atoi(iconIndex.c_str());
+                        }
+                        if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
+                        {
+                            receiverAI->sb->rti = targetIcon;
+                        }
+                        std::ostringstream replyStream;
+                        replyStream << "RTI is " << receiverAI->sb->rti;
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "assist")
+                    {
+                        if (receiverAI->sb->Assist())
+                        {
+                            receiverAI->assistDelay = 5000;
+                            std::ostringstream replyStream;
+                            replyStream << "Try to pin down my RTI : " << receiverAI->sb->rti;
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
+#pragma endregion
                 }
             }
         }
@@ -1742,896 +2669,9 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
         {
             for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
             {
-                Player* member = groupRef->GetSource();
-                if (member)
+                if (Player* member = groupRef->GetSource())
                 {
-                    if (WorldSession* memberSession = member->GetSession())
-                    {
-                        if (memberSession->isRobotSession)
-                        {
-                            if (AI_Base* memberAI = member->robotAI)
-                            {
-                                if (commandName == "role")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string newRole = commandVector.at(1);
-                                        memberAI->SetGroupRole(newRole);
-                                    }
-                                    replyStream << "My group role is ";
-                                    replyStream << memberAI->GetGroupRoleName();
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "leader")
-                                {
-                                    if (myGroup->GetLeaderGUID() == member->GetGUID())
-                                    {
-                                        if (memberSession->isRobotSession)
-                                        {
-                                            myGroup->ChangeLeader(pmSender->GetGUID());
-                                        }
-                                    }
-                                }
-                                else if (commandName == "follow")
-                                {
-                                    std::ostringstream replyStream;
-                                    bool takeAction = true;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string cmdDistanceStr = commandVector.at(1);
-                                        float cmdDistance = atof(cmdDistanceStr.c_str());
-                                        if (cmdDistance == 0.0f)
-                                        {
-                                            memberAI->following = false;
-                                            replyStream << "Stop following";
-                                            takeAction = false;
-                                        }
-                                        else if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE)
-                                        {
-                                            memberAI->followDistance = cmdDistance;
-                                            replyStream << "Distance updated";
-                                        }
-                                        else
-                                        {
-                                            replyStream << "Distance is not valid";
-                                            takeAction = false;
-                                        }
-                                    }
-                                    if (takeAction)
-                                    {
-                                        memberAI->eatDelay = 0;
-                                        memberAI->drinkDelay = 0;
-                                        memberAI->staying = false;
-                                        memberAI->holding = false;
-                                        memberAI->following = true;
-                                        if (memberAI->Follow())
-                                        {
-                                            replyStream << "Following " << memberAI->followDistance;
-                                        }
-                                        else
-                                        {
-                                            replyStream << "can not follow";
-                                        }
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "stay")
-                                {
-                                    std::string targetGroupRole = "";
-                                    if (commandVector.size() > 1)
-                                    {
-                                        targetGroupRole = commandVector.at(1);
-                                    }
-                                    if (memberAI->Stay(targetGroupRole))
-                                    {
-                                        WhisperTo(pmSender, "Staying", Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "hold")
-                                {
-                                    std::string targetGroupRole = "";
-                                    if (commandVector.size() > 1)
-                                    {
-                                        targetGroupRole = commandVector.at(1);
-                                    }
-                                    if (memberAI->Hold(targetGroupRole))
-                                    {
-                                        WhisperTo(member, "Holding", Language::LANG_UNIVERSAL, pmSender);
-                                    }
-                                }
-                                else if (commandName == "engage")
-                                {
-                                    memberAI->staying = false;
-                                    if (Unit* target = pmSender->GetSelectedUnit())
-                                    {
-                                        if (memberAI->Engage(target))
-                                        {
-                                            if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-                                            {
-                                                myGroup->SetTargetIcon(7, member->GetGUID(), target->GetGUID());
-                                            }
-                                            memberAI->engageTarget = target;
-                                            int engageDelay = 5000;
-                                            if (commandVector.size() > 1)
-                                            {
-                                                std::string checkStr = commandVector.at(1);
-                                                engageDelay = atoi(checkStr.c_str());
-                                            }
-                                            memberAI->engageDelay = engageDelay;
-                                            std::ostringstream replyStream;
-                                            replyStream << "Try to engage " << target->GetName();
-                                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                        }
-                                    }
-                                }
-                                else if (commandName == "rest")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (memberAI->sb->Eat())
-                                    {
-                                        memberAI->eatDelay = DEFAULT_REST_DELAY;
-                                        memberAI->drinkDelay = 1000;
-                                        replyStream << "Resting";
-                                    }
-                                    else
-                                    {
-                                        replyStream << "Can not rest";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "who")
-                                {
-                                    int whoTab = member->GetMaxTalentCountTab();
-                                    WhisperTo(pmSender, characterTalentTabNameMap[member->GetClass()][whoTab], Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "assemble")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (memberAI->moveDelay > 0 || memberAI->teleportAssembleDelay > 0)
-                                    {
-                                        replyStream << "I am on the way";
-                                    }
-                                    else
-                                    {
-                                        if (member->IsAlive())
-                                        {
-                                            if (member->GetDistance(pmSender) < ATTACK_RANGE_LIMIT)
-                                            {
-                                                member->GetMotionMaster()->Clear();
-                                                member->StopMoving();
-                                                memberAI->eatDelay = 0;
-                                                memberAI->drinkDelay = 0;
-                                                memberAI->sb->rm->MovePosition(pmSender->GetPosition());
-                                                replyStream << "We are close, I will move to you";
-                                                memberAI->moveDelay = 3000;
-                                            }
-                                            else
-                                            {
-                                                memberAI->teleportAssembleDelay = urand(30 * TimeConstants::IN_MILLISECONDS, 1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
-                                                replyStream << "I will join you in " << memberAI->teleportAssembleDelay << " ms";
-                                            }
-                                        }
-                                        else
-                                        {
-                                            memberAI->teleportAssembleDelay = urand(1 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 2 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
-                                            replyStream << "I will revive and join you in " << memberAI->teleportAssembleDelay << " ms";
-                                        }
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "tank")
-                                {
-                                    if (Unit* target = pmSender->GetSelectedUnit())
-                                    {
-                                        if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                                        {
-                                            if (memberAI->Tank(target))
-                                            {
-                                                if (myGroup->GetTargetIconByOG(target->GetGUID()) == -1)
-                                                {
-                                                    myGroup->SetTargetIcon(7, member->GetGUID(), target->GetGUID());
-                                                }
-                                                memberAI->staying = false;
-                                                memberAI->engageTarget = target;
-                                                int engageDelay = 5000;
-                                                if (commandVector.size() > 1)
-                                                {
-                                                    std::string checkStr = commandVector.at(1);
-                                                    engageDelay = atoi(checkStr.c_str());
-                                                }
-                                                memberAI->engageDelay = engageDelay;
-                                                std::ostringstream replyStream;
-                                                replyStream << "Try to tank " << target->GetName();
-                                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            memberAI->staying = false;
-                                        }
-                                    }
-                                }
-                                else if (commandName == "cast")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (member->IsAlive())
-                                    {
-                                        if (commandVector.size() > 1)
-                                        {
-                                            std::ostringstream targetStream;
-                                            uint8 arrayCount = 0;
-                                            for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-                                            {
-                                                if (arrayCount > 0)
-                                                {
-                                                    targetStream << (*it) << " ";
-                                                }
-                                                arrayCount++;
-                                            }
-                                            std::string spellName = TrimString(targetStream.str());
-                                            Unit* senderTarget = pmSender->GetSelectedUnit();
-                                            if (!senderTarget)
-                                            {
-                                                senderTarget = member;
-                                            }
-                                            if (memberAI->sb->CastSpell(senderTarget, spellName, VISIBILITY_DISTANCE_NORMAL))
-                                            {
-                                                replyStream << "Cast spell " << spellName << " on " << senderTarget->GetName();
-                                            }
-                                            else
-                                            {
-                                                replyStream << "Can not cast spell " << spellName << " on " << senderTarget->GetName();
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        replyStream << "I am dead";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "cancel")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (member->IsAlive())
-                                    {
-                                        if (commandVector.size() > 1)
-                                        {
-                                            std::ostringstream targetStream;
-                                            uint8 arrayCount = 0;
-                                            for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-                                            {
-                                                if (arrayCount > 0)
-                                                {
-                                                    targetStream << (*it) << " ";
-                                                }
-                                                arrayCount++;
-                                            }
-                                            std::string spellName = TrimString(targetStream.str());
-                                            if (memberAI->sb->CancelAura(spellName))
-                                            {
-                                                replyStream << "Aura canceled " << spellName;
-                                            }
-                                            else
-                                            {
-                                                replyStream << "Can not cancel aura " << spellName;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        replyStream << "I am dead";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "use")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (member->IsAlive())
-                                    {
-                                        if (commandVector.size() > 1)
-                                        {
-                                            std::string useType = commandVector.at(1);
-                                            if (useType == "go")
-                                            {
-                                                if (commandVector.size() > 2)
-                                                {
-                                                    std::ostringstream goNameStream;
-                                                    uint32 checkPos = 2;
-                                                    while (checkPos < commandVector.size())
-                                                    {
-                                                        goNameStream << commandVector.at(checkPos) << " ";
-                                                        checkPos++;
-                                                    }
-                                                    std::string goName = TrimString(goNameStream.str());
-                                                    bool validToUse = false;
-                                                    std::list<GameObject*> nearGOList;
-                                                    member->GetGameObjectListWithEntryInGrid(nearGOList, 0, MELEE_MAX_DISTANCE);
-                                                    for (std::list<GameObject*>::iterator it = nearGOList.begin(); it != nearGOList.end(); it++)
-                                                    {
-                                                        if ((*it)->GetName() == goName)
-                                                        {
-                                                            member->SetFacingToObject((*it));
-                                                            member->StopMoving();
-                                                            member->GetMotionMaster()->Clear();
-                                                            (*it)->Use(member);
-                                                            replyStream << "Use game object : " << goName;
-                                                            validToUse = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!validToUse)
-                                                    {
-                                                        replyStream << "No go with name " << goName << " nearby";
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    replyStream << "No go name";
-                                                }
-                                            }
-                                            else if (useType == "item")
-                                            {
-
-                                            }
-                                            else
-                                            {
-                                                replyStream << "Unknown type";
-                                            }
-                                        }
-                                        else
-                                        {
-                                            replyStream << "Use what?";
-                                        }
-                                    }
-                                    else
-                                    {
-                                        replyStream << "I am dead";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "stop")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (member->IsAlive())
-                                    {
-                                        member->StopMoving();
-                                        member->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
-                                        member->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-                                        member->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-                                        member->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
-                                        replyStream << "Stopped";
-                                    }
-                                    else
-                                    {
-                                        replyStream << "I am dead";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "delay")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        int delayMS = std::stoi(commandVector.at(1));
-                                        memberAI->dpsDelay = delayMS;
-                                        replyStream << "DPS delay set to : " << delayMS;
-                                    }
-                                    else
-                                    {
-                                        replyStream << "DPS delay is : " << memberAI->dpsDelay;
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "threat")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (member->IsAlive())
-                                    {
-                                        replyStream << "Threat list : ";
-                                        for (ThreatReference const* ref : member->GetThreatManager().GetUnsortedThreatList())
-                                        {
-                                            replyStream << ref->GetOwner()->GetName() << ", ";
-                                        }
-                                    }
-                                    else
-                                    {
-                                        replyStream << "I am dead";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "revive")
-                                {
-                                    if (member->IsAlive())
-                                    {
-                                        std::unordered_map<uint32, Player*> deadMap;
-                                        if (Group* myGroup = pmSender->GetGroup())
-                                        {
-                                            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                                            {
-                                                if (Player* member = groupRef->GetSource())
-                                                {
-                                                    if (!member->IsAlive())
-                                                    {
-                                                        deadMap[deadMap.size()] = member;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (deadMap.size() > 0)
-                                        {
-                                            int reviveIndex = 0;
-                                            std::ostringstream reviveSpellName;
-                                            if (member->GetClass() == Classes::CLASS_DRUID || member->GetClass() == Classes::CLASS_PRIEST || member->GetClass() == Classes::CLASS_PALADIN || member->GetClass() == Classes::CLASS_SHAMAN)
-                                            {
-                                                if (member->GetClass() == Classes::CLASS_PRIEST)
-                                                {
-                                                    reviveSpellName << "Resurrection";
-                                                }
-                                                else if (member->GetClass() == Classes::CLASS_PALADIN)
-                                                {
-                                                    reviveSpellName << "Redemption";
-                                                }
-                                                else if (member->GetClass() == Classes::CLASS_SHAMAN)
-                                                {
-                                                    reviveSpellName << "Ancestral Spirit";
-                                                }
-                                                if (deadMap.find(reviveIndex) == deadMap.end())
-                                                {
-                                                    break;
-                                                }
-                                                if (memberAI->sb->CastSpell(deadMap[reviveIndex], reviveSpellName.str(), RANGED_MAX_DISTANCE, false, false, true))
-                                                {
-                                                    std::ostringstream replyStream;
-                                                    replyStream << "Reviving " << deadMap[reviveIndex]->GetName();
-                                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                                }
-                                                reviveIndex++;
-                                            }
-                                        }
-                                    }
-                                }
-                                else if (commandName == "cure")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string cureCMD = commandVector.at(1);
-                                        if (cureCMD == "on")
-                                        {
-                                            memberAI->cure = true;
-                                        }
-                                        else if (cureCMD == "off")
-                                        {
-                                            memberAI->cure = false;
-                                        }
-                                        else
-                                        {
-                                            replyStream << "Unknown state";
-                                        }
-                                    }
-                                    if (memberAI->cure)
-                                    {
-                                        replyStream << "Auto cure is on";
-                                    }
-                                    else
-                                    {
-                                        replyStream << "Auto cure is off";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "aoe")
-                                {
-                                    std::ostringstream replyStream;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string on = commandVector.at(1);
-                                        if (on == "on")
-                                        {
-                                            memberAI->aoe = true;
-                                        }
-                                        else if (on == "off")
-                                        {
-                                            memberAI->aoe = false;
-                                        }
-                                    }
-                                    if (memberAI->aoe)
-                                    {
-                                        replyStream << "AOE is on";
-                                    }
-                                    else
-                                    {
-                                        replyStream << "AOE is off";
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "emote")
-                                {
-                                    if (member->IsAlive())
-                                    {
-                                        if (commandVector.size() > 1)
-                                        {
-                                            int emoteCMD = std::stoi(commandVector.at(1));
-                                            member->HandleEmoteCommand((Emote)emoteCMD);
-                                        }
-                                        else
-                                        {
-                                            member->AttackStop();
-                                            member->CombatStop();
-                                        }
-                                    }
-                                    else
-                                    {
-                                        WhisperTo(pmSender, "I am dead", Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "pa")
-                                {
-                                    if (member->GetClass() == Classes::CLASS_PALADIN)
-                                    {
-                                        std::ostringstream replyStream;
-                                        if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
-                                        {
-                                            if (commandVector.size() > 1)
-                                            {
-                                                std::string auratypeName = commandVector.at(1);
-                                                if (auratypeName == "concentration")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                }
-                                                else if (auratypeName == "devotion")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                }
-                                                else if (auratypeName == "retribution")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                }
-                                                else if (auratypeName == "fire")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                }
-                                                else if (auratypeName == "frost")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                }
-                                                else if (auratypeName == "shadow")
-                                                {
-                                                    sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                }
-                                                else
-                                                {
-                                                    replyStream << "Unknown type";
-                                                }
-                                            }
-                                            switch (sp->auraType)
-                                            {
-                                            case PaladinAuraType::PaladinAuraType_Concentration:
-                                            {
-                                                replyStream << "concentration";
-                                                break;
-                                            }
-                                            case PaladinAuraType::PaladinAuraType_Devotion:
-                                            {
-                                                replyStream << "devotion";
-                                                break;
-                                            }
-                                            case PaladinAuraType::PaladinAuraType_Retribution:
-                                            {
-                                                replyStream << "retribution";
-                                                break;
-                                            }
-                                            case PaladinAuraType::PaladinAuraType_FireResistant:
-                                            {
-                                                replyStream << "fire";
-                                                break;
-                                            }
-                                            case PaladinAuraType::PaladinAuraType_FrostResistant:
-                                            {
-                                                replyStream << "frost";
-                                                break;
-                                            }
-                                            case PaladinAuraType::PaladinAuraType_ShadowResistant:
-                                            {
-                                                replyStream << "shadow";
-                                                break;
-                                            }
-                                            default:
-                                            {
-                                                break;
-                                            }
-                                            }
-                                        }
-                                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "pj")
-                                {
-                                    if (member->GetClass() == Classes::CLASS_PALADIN)
-                                    {
-                                        std::ostringstream replyStream;
-                                        if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
-                                        {
-                                            if (commandVector.size() > 1)
-                                            {
-                                                std::string auratypeName = commandVector.at(1);
-                                                if (auratypeName == "justice")
-                                                {
-                                                    sp->judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
-                                                }
-                                                else if (auratypeName == "wisdom")
-                                                {
-                                                    sp->judgementType = PaladinJudgementType::PaladinJudgementType_Wisdom;
-                                                }
-                                                else if (auratypeName == "light")
-                                                {
-                                                    sp->judgementType = PaladinJudgementType::PaladinJudgementType_Light;
-                                                }
-                                                else
-                                                {
-                                                    replyStream << "Unknown type";
-                                                }
-                                            }
-                                            switch (sp->judgementType)
-                                            {
-                                            case PaladinJudgementType::PaladinJudgementType_Justice:
-                                            {
-                                                replyStream << "justice";
-                                                break;
-                                            }
-                                            case PaladinJudgementType::PaladinJudgementType_Wisdom:
-                                            {
-                                                replyStream << "wisdom";
-                                                break;
-                                            }
-                                            case PaladinJudgementType::PaladinJudgementType_Light:
-                                            {
-                                                replyStream << "light";
-                                                break;
-                                            }
-                                            default:
-                                            {
-                                                break;
-                                            }
-                                            }
-                                        }
-                                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "pb")
-                                {
-                                    if (member->GetClass() == Classes::CLASS_PALADIN)
-                                    {
-                                        std::ostringstream replyStream;
-                                        if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
-                                        {
-                                            if (commandVector.size() > 1)
-                                            {
-                                                std::string blessingTypeName = commandVector.at(1);
-                                                if (blessingTypeName == "kings")
-                                                {
-                                                    sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-                                                }
-                                                else if (blessingTypeName == "might")
-                                                {
-                                                    sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                                                }
-                                                else if (blessingTypeName == "wisdom")
-                                                {
-                                                    sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-                                                }
-                                                else
-                                                {
-                                                    replyStream << "Unknown type";
-                                                }
-                                            }
-                                            switch (sp->blessingType)
-                                            {
-                                            case PaladinBlessingType::PaladinBlessingType_Kings:
-                                            {
-                                                replyStream << "kings";
-                                                break;
-                                            }
-                                            case PaladinBlessingType::PaladinBlessingType_Might:
-                                            {
-                                                replyStream << "might";
-                                                break;
-                                            }
-                                            case PaladinBlessingType::PaladinBlessingType_Wisdom:
-                                            {
-                                                replyStream << "wisdom";
-                                                break;
-                                            }
-                                            default:
-                                            {
-                                                break;
-                                            }
-                                            }
-                                        }
-                                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "ps")
-                                {
-                                if (member->GetClass() == Classes::CLASS_PALADIN)
-                                {
-                                    std::ostringstream replyStream;
-                                    if (Script_Paladin* sp = (Script_Paladin*)memberAI->sb)
-                                    {
-                                        if (commandVector.size() > 1)
-                                        {
-                                            std::string sealTypeName = commandVector.at(1);
-                                            if (sealTypeName == "righteousness")
-                                            {
-                                                sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
-                                            }
-                                            else if (sealTypeName == "justice")
-                                            {
-                                                sp->sealType = PaladinSealType::PaladinSealType_Justice;
-                                            }
-                                            else
-                                            {
-                                                replyStream << "Unknown type";
-                                            }
-                                        }
-                                        switch (sp->sealType)
-                                        {
-                                        case PaladinSealType::PaladinSealType_Righteousness:
-                                        {
-                                            replyStream << "righteousness";
-                                            break;
-                                        }
-                                        case PaladinSealType::PaladinSealType_Justice:
-                                        {
-                                            replyStream << "justice";
-                                            break;
-                                        }
-                                        default:
-                                        {
-                                            break;
-                                        }
-                                        }
-                                    }
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                }
-                                else if (commandName == "ha")
-                                {
-                                    if (member->GetClass() == Classes::CLASS_HUNTER)
-                                    {
-                                        std::ostringstream replyStream;
-                                        if (Script_Hunter* sh = (Script_Hunter*)memberAI->sb)
-                                        {
-                                            if (commandVector.size() > 1)
-                                            {
-                                                std::string aspectName = commandVector.at(1);
-                                                if (aspectName == "hawk")
-                                                {
-                                                    sh->aspectType = HunterAspectType::HunterAspectType_Hawk;
-                                                }
-                                                else if (aspectName == "monkey")
-                                                {
-                                                    sh->aspectType = HunterAspectType::HunterAspectType_Monkey;
-                                                }
-                                                else if (aspectName == "wild")
-                                                {
-                                                    sh->aspectType = HunterAspectType::HunterAspectType_Wild;
-                                                }
-                                                else if (aspectName == "pack")
-                                                {
-                                                    sh->aspectType = HunterAspectType::HunterAspectType_Pack;
-                                                }
-                                                else
-                                                {
-                                                    replyStream << "Unknown type";
-                                                }
-                                            }
-                                            switch (sh->aspectType)
-                                            {
-                                            case HunterAspectType::HunterAspectType_Hawk:
-                                            {
-                                                replyStream << "hawk";
-                                                break;
-                                            }
-                                            case HunterAspectType::HunterAspectType_Monkey:
-                                            {
-                                                replyStream << "monkey";
-                                                break;
-                                            }
-                                            case HunterAspectType::HunterAspectType_Wild:
-                                            {
-                                                replyStream << "wild";
-                                                break;
-                                            }
-                                            case HunterAspectType::HunterAspectType_Pack:
-                                            {
-                                                replyStream << "pack";
-                                                break;
-                                            }
-                                            default:
-                                            {
-                                                break;
-                                            }
-                                            }
-                                        }
-                                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                                else if (commandName == "equip")
-                                {
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string equipType = commandVector.at(1);
-                                        if (equipType == "molten core")
-                                        {
-                                            if (member->GetClass() == Classes::CLASS_DRUID)
-                                            {
-                                                for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
-                                                {
-                                                    if (Item* currentEquip = member->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-                                                    {
-                                                        member->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                                                    }
-                                                }
-                                                EquipNewItem(member, 16983, EquipmentSlots::EQUIPMENT_SLOT_HEAD);
-                                                EquipNewItem(member, 19139, EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS);
-                                                EquipNewItem(member, 16833, EquipmentSlots::EQUIPMENT_SLOT_CHEST);
-                                                EquipNewItem(member, 11764, EquipmentSlots::EQUIPMENT_SLOT_WRISTS);
-                                                EquipNewItem(member, 16831, EquipmentSlots::EQUIPMENT_SLOT_HANDS);
-                                                EquipNewItem(member, 19149, EquipmentSlots::EQUIPMENT_SLOT_WAIST);
-                                                EquipNewItem(member, 15054, EquipmentSlots::EQUIPMENT_SLOT_LEGS);
-                                                EquipNewItem(member, 16982, EquipmentSlots::EQUIPMENT_SLOT_FEET);
-                                                EquipNewItem(member, 18803, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND);
-                                                EquipNewItem(member, 2802, EquipmentSlots::EQUIPMENT_SLOT_TRINKET1);
-                                                EquipNewItem(member, 18406, EquipmentSlots::EQUIPMENT_SLOT_TRINKET2);
-                                                EquipNewItem(member, 18398, EquipmentSlots::EQUIPMENT_SLOT_FINGER1);
-                                                EquipNewItem(member, 18813, EquipmentSlots::EQUIPMENT_SLOT_FINGER2);
-                                                EquipNewItem(member, 18811, EquipmentSlots::EQUIPMENT_SLOT_BACK);
-                                                EquipNewItem(member, 16309, EquipmentSlots::EQUIPMENT_SLOT_NECK);
-                                                std::ostringstream replyStream;
-                                                replyStream << "Equip all fire resistance gears.";
-                                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                            }
-                                        }
-                                        else if (equipType == "reset")
-                                        {
-                                            InitializeEquipments(member, true);
-                                            std::ostringstream replyStream;
-                                            replyStream << "All my equipments are reset.";
-                                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                        }
-                                    }
-                                }
-                                else if (commandName == "rti")
-                                {
-                                    int targetIcon = -1;
-                                    if (commandVector.size() > 1)
-                                    {
-                                        std::string iconIndex = commandVector.at(1);
-                                        targetIcon = atoi(iconIndex.c_str());
-                                    }
-                                    if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
-                                    {
-                                        memberAI->sb->rti = targetIcon;
-                                    }
-                                    std::ostringstream replyStream;
-                                    replyStream << "RTI is " << memberAI->sb->rti;
-                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                }
-                                else if (commandName == "assist")
-                                {
-                                    if (memberAI->sb->Assist())
-                                    {
-                                        memberAI->assistDelay = 5000;
-                                        std::ostringstream replyStream;
-                                        replyStream << "Try to pin down my RTI : " << memberAI->sb->rti;
-                                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    HandleChatCommand(pmSender, pmCMD, member);
                 }
             }
         }
@@ -2685,7 +2725,7 @@ void RobotManager::LearnPlayerTalents(Player* pmTargetPlayer)
         else if (pmTargetPlayer->GetClass() == Classes::CLASS_PALADIN)
         {
             specialty = urand(0, 100);
-            if (specialty < 20)
+            if (specialty < 35)
             {
                 specialty = 0;
             }
@@ -2818,6 +2858,8 @@ bool RobotManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetLe
         {
             pmTargetPlayer->LearnSpell(198, true);
             pmTargetPlayer->LearnSpell(199, true);
+            pmTargetPlayer->LearnSpell(55, true);
+            pmTargetPlayer->LearnSpell(201, true);
             //pmTargetPlayer->SetSkill(160, pmTargetPlayer->GetLevel() * 5, pmTargetPlayer->GetLevel() * 5); // mace 2 
             break;
         }
@@ -2943,7 +2985,7 @@ bool RobotManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetLe
         resetEquipments = true;
     }
     InitializeEquipments(pmTargetPlayer, resetEquipments);
-    
+
     std::ostringstream msgStream;
     msgStream << pmTargetPlayer->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
@@ -3049,11 +3091,21 @@ void RobotManager::InitializeEquipments(Player* pmTargetPlayer, bool pmReset)
                 }
                 if (dps)
                 {
-                    weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE2;
+                    weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD2;
+                    uint32 weaponType = urand(0, 100);
+                    if (weaponType < 50)
+                    {
+                        weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE2;
+                    }
                 }
                 else
                 {
                     weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE;
+                    uint32 weaponType = urand(0, 100);
+                    if (weaponType < 50)
+                    {
+                        weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
+                    }
                     weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
                 }
                 break;

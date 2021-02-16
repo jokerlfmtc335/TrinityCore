@@ -78,10 +78,6 @@ void RobotEntity::Update(uint32 pmDiff)
                 }
                 else
                 {
-                    std::ostringstream sqlStream;
-                    sqlStream << "update robot set account_name = '" << account_name << "' where robot_id = " << robot_id;
-                    std::string sql = sqlStream.str();
-                    CharacterDatabase.DirectExecute(sql.c_str());
                     entityState = RobotEntityState::RobotEntityState_CheckAccount;
                 }
             }

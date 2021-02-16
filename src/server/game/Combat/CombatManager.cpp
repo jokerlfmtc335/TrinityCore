@@ -346,6 +346,12 @@ bool CombatManager::UpdateOwnerCombatState() const
         _owner->AtEnterCombat();
         if (_owner->GetTypeId() != TYPEID_UNIT)
             _owner->AtEngage(GetAnyTarget());
+
+        // lfm stand when in combat
+        if (_owner->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+        {
+            _owner->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+        }
     }
     else
     {
