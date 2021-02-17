@@ -3155,7 +3155,7 @@ void WorldObject::GetNearPoint2D(WorldObject const* searcher, float& x, float& y
         effectiveReach += searcher->GetCombatReach();
 
         // lfm near point set combat reach to scale 
-        effectiveReach = DEFAULT_PLAYER_COMBAT_REACH * searcher->GetObjectScale();
+        effectiveReach = searcher->GetObjectScale();
 
         if (this != searcher)
         {

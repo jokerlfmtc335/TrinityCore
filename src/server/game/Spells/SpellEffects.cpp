@@ -4333,7 +4333,7 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
             //Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
             //unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
             float x = 0.0f, y = 0.0f, z = 0.0f;
-            unitTarget->GetNearPoint(unitCaster, x, y, z, DEFAULT_PLAYER_COMBAT_REACH, unitTarget->GetAbsoluteAngle(unitCaster->GetPosition()));
+            unitTarget->GetNearPoint(unitCaster, x, y, z, MIN_MELEE_REACH, unitTarget->GetAbsoluteAngle(unitCaster->GetPosition()));
             unitCaster->GetMotionMaster()->MoveCharge(x, y, z, speed);
         }
         else

@@ -479,9 +479,18 @@ void Unit::Update(uint32 p_time)
         cdiBase.delay -= p_time;
         if (cdiBase.delay <= 0)
         {
-            DealMeleeDamage(&cdiBase, true);
-            DamageInfo dmgInfo(cdiBase);
-            Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+            if (cdiBase.Attacker && cdiBase.Target)
+            {
+                if (cdiBase.Attacker->GetTypeId() == TypeID::TYPEID_PLAYER || cdiBase.Attacker->GetTypeId() == TypeID::TYPEID_UNIT)
+                {
+                    if (cdiBase.Target->GetTypeId() == TypeID::TYPEID_PLAYER || cdiBase.Target->GetTypeId() == TypeID::TYPEID_UNIT)
+                    {
+                        DealMeleeDamage(&cdiBase, true);
+                        DamageInfo dmgInfo(cdiBase);
+                        Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+                    }
+                }
+            }
             cdiBase.delay = 0;
         }
     }
@@ -490,9 +499,18 @@ void Unit::Update(uint32 p_time)
         cdiOff.delay -= p_time;
         if (cdiOff.delay <= 0)
         {
-            DealMeleeDamage(&cdiOff, true);
-            DamageInfo dmgInfo(cdiOff);
-            Unit::ProcSkillsAndAuras(cdiOff.Attacker, cdiOff.Target, cdiOff.ProcAttacker, cdiOff.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+            if (cdiOff.Attacker && cdiOff.Target)
+            {
+                if (cdiOff.Attacker->GetTypeId() == TypeID::TYPEID_PLAYER || cdiOff.Attacker->GetTypeId() == TypeID::TYPEID_UNIT)
+                {
+                    if (cdiOff.Target->GetTypeId() == TypeID::TYPEID_PLAYER || cdiOff.Target->GetTypeId() == TypeID::TYPEID_UNIT)
+                    {
+                        DealMeleeDamage(&cdiOff, true);
+                        DamageInfo dmgInfo(cdiOff);
+                        Unit::ProcSkillsAndAuras(cdiOff.Attacker, cdiOff.Target, cdiOff.ProcAttacker, cdiOff.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
+                    }
+                }
+            }
             cdiOff.delay = 0;
         }
     }
@@ -10167,7 +10185,17 @@ void Unit::GetProcAurasTriggeredOnEvent(AuraApplicationProcContainer& aurasTrigg
     // or generate one on our own
     else
     {
-        for (AuraApplicationMap::iterator itr = GetAppliedAuras().begin(); itr != GetAppliedAuras().end(); ++itr)
+        // lfm try fix crash
+        //for (AuraApplicationMap::iterator itr = GetAppliedAuras().begin(); itr != GetAppliedAuras().end(); ++itr)
+        //{
+        //    if (uint8 procEffectMask = itr->second->GetBase()->GetProcEffectMask(itr->second, eventInfo, now))
+        //    {
+        //        itr->second->GetBase()->PrepareProcToTrigger(itr->second, eventInfo, now);
+        //        aurasTriggeringProc.emplace_back(procEffectMask, itr->second);
+        //    }
+        //}
+        std::multimap<uint32, AuraApplication*> appliedAurasMM = GetAppliedAuras();
+        for (AuraApplicationMap::iterator itr = appliedAurasMM.begin(); itr != appliedAurasMM.end(); ++itr)
         {
             if (uint8 procEffectMask = itr->second->GetBase()->GetProcEffectMask(itr->second, eventInfo, now))
             {

@@ -326,8 +326,8 @@ Script_Base::Script_Base(Player* pmMe)
     characterType = 0;
     petting = true;
 
-    chaseDistanceMin = CHASE_MIN_DISTANCE;
-    chaseDistanceMax = CHASE_MAX_DISTANCE;
+    chaseDistanceMin = MELEE_MIN_DISTANCE;
+    chaseDistanceMax = MELEE_MAX_DISTANCE;
 
     rti = -1;
 }
@@ -832,19 +832,19 @@ bool Script_Base::Eat()
     uint32 foodEntry = 0;
     if (me->GetLevel() >= 80)
     {
-        foodEntry = 3927;
+        foodEntry = 35950;
     }
     else if (me->GetLevel() >= 75)
     {
-        foodEntry = 3927;
+        foodEntry = 35950;
     }
     else if (me->GetLevel() >= 65)
     {
-        foodEntry = 3927;
+        foodEntry = 33451;
     }
     else if (me->GetLevel() >= 55)
     {
-        foodEntry = 3927;
+        foodEntry = 27854;
     }
     else if (me->GetLevel() >= 45)
     {
@@ -908,19 +908,23 @@ bool Script_Base::Drink()
     uint32 drinkEntry = 0;
     if (me->GetLevel() >= 80)
     {
-        drinkEntry = 3927;
+        drinkEntry = 33445;
     }
     else if (me->GetLevel() >= 75)
     {
-        drinkEntry = 3927;
+        drinkEntry = 33445;
+    }
+    else if (me->GetLevel() >= 70)
+    {
+        drinkEntry = 33444;
     }
     else if (me->GetLevel() >= 65)
     {
-        drinkEntry = 3927;
+        drinkEntry = 35954;
     }
-    else if (me->GetLevel() >= 55)
+    else if (me->GetLevel() >= 60)
     {
-        drinkEntry = 3927;
+        drinkEntry = 28399;
     }
     else if (me->GetLevel() >= 45)
     {

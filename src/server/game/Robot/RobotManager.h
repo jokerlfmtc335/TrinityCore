@@ -47,14 +47,6 @@
 # define MELEE_MAX_DISTANCE 2.0f
 #endif
 
-#ifndef CHASE_MIN_DISTANCE
-# define CHASE_MIN_DISTANCE 0.1f
-#endif
-
-#ifndef CHASE_MAX_DISTANCE
-# define CHASE_MAX_DISTANCE 0.5f
-#endif
-
 #ifndef RANGED_NORMAL_DISTANCE
 # define RANGED_NORMAL_DISTANCE 20.0f
 #endif
