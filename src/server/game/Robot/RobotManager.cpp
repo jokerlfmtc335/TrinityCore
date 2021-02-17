@@ -67,6 +67,8 @@ void RobotManager::InitializeManager()
 
     availableRaces[CLASS_PALADIN][availableRaces[CLASS_PALADIN].size()] = RACE_HUMAN;
     availableRaces[CLASS_PALADIN][availableRaces[CLASS_PALADIN].size()] = RACE_DWARF;
+    availableRaces[CLASS_PALADIN][availableRaces[CLASS_PALADIN].size()] = Races::RACE_DRAENEI;
+    availableRaces[CLASS_PALADIN][availableRaces[CLASS_PALADIN].size()] = Races::RACE_BLOODELF;
 
     availableRaces[CLASS_ROGUE][availableRaces[CLASS_ROGUE].size()] = RACE_HUMAN;
     availableRaces[CLASS_ROGUE][availableRaces[CLASS_ROGUE].size()] = RACE_DWARF;
@@ -91,6 +93,7 @@ void RobotManager::InitializeManager()
     availableRaces[CLASS_WARLOCK][availableRaces[CLASS_WARLOCK].size()] = RACE_GNOME;
     availableRaces[CLASS_WARLOCK][availableRaces[CLASS_WARLOCK].size()] = RACE_UNDEAD_PLAYER;
     availableRaces[CLASS_WARLOCK][availableRaces[CLASS_WARLOCK].size()] = RACE_ORC;
+    availableRaces[CLASS_WARLOCK][availableRaces[CLASS_WARLOCK].size()] = Races::RACE_DRAENEI;
 
     availableRaces[CLASS_SHAMAN][availableRaces[CLASS_SHAMAN].size()] = RACE_ORC;
     availableRaces[CLASS_SHAMAN][availableRaces[CLASS_SHAMAN].size()] = RACE_TAUREN;
@@ -112,6 +115,9 @@ void RobotManager::InitializeManager()
 
     allianceRaces[CLASS_PALADIN][allianceRaces[CLASS_PALADIN].size()] = RACE_HUMAN;
     allianceRaces[CLASS_PALADIN][allianceRaces[CLASS_PALADIN].size()] = RACE_DWARF;
+    allianceRaces[CLASS_PALADIN][allianceRaces[CLASS_PALADIN].size()] = Races::RACE_DRAENEI;
+
+    allianceRaces[Classes::CLASS_SHAMAN][allianceRaces[Classes::CLASS_SHAMAN].size()] = Races::RACE_DRAENEI;
 
     allianceRaces[CLASS_ROGUE][allianceRaces[CLASS_ROGUE].size()] = RACE_HUMAN;
     allianceRaces[CLASS_ROGUE][allianceRaces[CLASS_ROGUE].size()] = RACE_DWARF;
@@ -154,6 +160,8 @@ void RobotManager::InitializeManager()
     hordeRaces[CLASS_SHAMAN][hordeRaces[CLASS_SHAMAN].size()] = RACE_ORC;
     hordeRaces[CLASS_SHAMAN][hordeRaces[CLASS_SHAMAN].size()] = RACE_TAUREN;
     hordeRaces[CLASS_SHAMAN][hordeRaces[CLASS_SHAMAN].size()] = RACE_TROLL;
+
+    hordeRaces[Classes::CLASS_PALADIN][hordeRaces[Classes::CLASS_PALADIN].size()] = Races::RACE_BLOODELF;
 
     hordeRaces[CLASS_HUNTER][hordeRaces[CLASS_HUNTER].size()] = RACE_ORC;
     hordeRaces[CLASS_HUNTER][hordeRaces[CLASS_HUNTER].size()] = RACE_TAUREN;
@@ -1860,14 +1868,11 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                         }
                                         else
                                         {
-                                            if (Spell* currentSpell = member->GetCurrentSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL))
+                                            if (member->IsNonMeleeSpellCast(false))
                                             {
-                                                if (Unit* targetUnit = currentSpell->m_targets.GetUnitTarget())
+                                                if (Player* targetPlayer = member->GetSelectedPlayer())
                                                 {
-                                                    if (Player* targetPlayer = targetUnit->ToPlayer())
-                                                    {
-                                                        targetingMap[targetPlayer->GetGUID().GetCounter()] = targetPlayer;
-                                                    }
+                                                    targetingMap[targetPlayer->GetGUID().GetCounter()] = targetPlayer;
                                                 }
                                             }
                                         }
@@ -1902,6 +1907,10 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                                     std::ostringstream replyStream;
                                                     replyStream << "Reviving " << eachDead->GetName();
                                                     WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                                                }
+                                                else
+                                                {
+                                                    WhisperTo(pmSender, "Can not do reviving", Language::LANG_UNIVERSAL, pmReceiver);
                                                 }
                                             }
                                         }

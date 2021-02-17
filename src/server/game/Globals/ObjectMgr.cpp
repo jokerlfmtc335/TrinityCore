@@ -638,6 +638,13 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.flags_extra = fields[62].GetUInt32();
     creatureTemplate.ScriptID = GetScriptId(fields[63].GetString());
 
+    // lfm creature_template corrections 
+    if (creatureTemplate.Entry == 14757)
+    {
+        // Elder Torntusk
+        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
+    }
+
     // lfm extra scripts
     if (creatureTemplate.Entry == 4444)
     {

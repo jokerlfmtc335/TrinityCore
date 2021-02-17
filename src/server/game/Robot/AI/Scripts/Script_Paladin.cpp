@@ -536,23 +536,29 @@ bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE)
                 }
                 if (mainTank)
                 {
-                    uint32 meleeCount = 0;
-                    for (std::set<Unit*>::iterator gaIT = mainTank->getAttackers().begin(); gaIT != mainTank->getAttackers().end(); gaIT++)
+                    float tankDistance = me->GetDistance(mainTank->GetPosition());
                     {
-                        if (Unit* eachAttacker = *gaIT)
+                        if (tankDistance < MELEE_MAX_DISTANCE)
                         {
-                            if (mainTank->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                            uint32 meleeCount = 0;
+                            for (std::set<Unit*>::iterator gaIT = mainTank->getAttackers().begin(); gaIT != mainTank->getAttackers().end(); gaIT++)
                             {
-                                meleeCount++;
+                                if (Unit* eachAttacker = *gaIT)
+                                {
+                                    if (mainTank->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                                    {
+                                        meleeCount++;
+                                    }
+                                }
                             }
-                        }
-                    }
-                    if (meleeCount > 1)
-                    {
-                        if (CastSpell(me, "Consecration"))
-                        {
-                            consecrationDelay = 0;
-                            return true;
+                            if (meleeCount > 1)
+                            {
+                                if (CastSpell(me, "Consecration"))
+                                {
+                                    consecrationDelay = 0;
+                                    return true;
+                                }
+                            }
                         }
                     }
                 }

@@ -830,7 +830,23 @@ bool Script_Base::Eat()
         return false;
     }
     uint32 foodEntry = 0;
-    if (me->GetLevel() >= 45)
+    if (me->GetLevel() >= 80)
+    {
+        foodEntry = 3927;
+    }
+    else if (me->GetLevel() >= 75)
+    {
+        foodEntry = 3927;
+    }
+    else if (me->GetLevel() >= 65)
+    {
+        foodEntry = 3927;
+    }
+    else if (me->GetLevel() >= 55)
+    {
+        foodEntry = 3927;
+    }
+    else if (me->GetLevel() >= 45)
     {
         foodEntry = 8932;
     }
@@ -890,7 +906,23 @@ bool Script_Base::Drink()
         return false;
     }
     uint32 drinkEntry = 0;
-    if (me->GetLevel() >= 45)
+    if (me->GetLevel() >= 80)
+    {
+        drinkEntry = 3927;
+    }
+    else if (me->GetLevel() >= 75)
+    {
+        drinkEntry = 3927;
+    }
+    else if (me->GetLevel() >= 65)
+    {
+        drinkEntry = 3927;
+    }
+    else if (me->GetLevel() >= 55)
+    {
+        drinkEntry = 3927;
+    }
+    else if (me->GetLevel() >= 45)
     {
         drinkEntry = 8766;
     }
