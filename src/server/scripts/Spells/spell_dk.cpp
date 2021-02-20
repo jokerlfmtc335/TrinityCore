@@ -754,7 +754,7 @@ class spell_dk_dancing_rune_weapon : public SpellScriptLoader
             }
 
             // This is a port of the old switch hack in Unit.cpp, it's not correct
-            void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+            void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
             {
                 PreventDefaultAction();
                 Unit* caster = GetCaster();
@@ -771,20 +771,28 @@ class spell_dk_dancing_rune_weapon : public SpellScriptLoader
                     }
                 }
 
-                if (!drw || !drw->GetVictim())
+                // lfm dancing rune weapon fix 
+                //if (!drw || !drw->GetVictim())
+                //    return;
+                if (!drw)
+                {
+                    return;
+                }
+                DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+                if (!damageInfo || !damageInfo->GetDamage())
                     return;
 
                 SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
                 if (!spellInfo)
                     return;
 
-                DamageInfo* damageInfo = eventInfo.GetDamageInfo();
-                if (!damageInfo || !damageInfo->GetDamage())
-                    return;
-
-                int32 amount = static_cast<int32>(damageInfo->GetDamage()) / 2;
-                drw->SendSpellNonMeleeDamageLog(drw->GetVictim(), spellInfo->Id, amount, spellInfo->GetSchoolMask(), 0, 0, false, 0, false);
-                Unit::DealDamage(drw, drw->GetVictim(), amount, nullptr, SPELL_DIRECT_DAMAGE, spellInfo->GetSchoolMask(), spellInfo, true);
+                if (Unit* eventTarget = eventInfo.GetProcTarget())
+                {
+                    drw->Attack(eventTarget, true);
+                    int32 amount = static_cast<int32>(damageInfo->GetDamage()) / 2;
+                    drw->SendSpellNonMeleeDamageLog(drw->GetVictim(), spellInfo->Id, amount, spellInfo->GetSchoolMask(), 0, 0, false, 0, false);
+                    Unit::DealDamage(drw, drw->GetVictim(), amount, nullptr, SPELL_DIRECT_DAMAGE, spellInfo->GetSchoolMask(), spellInfo, true);
+                }
             }
 
             void Register() override

@@ -63,6 +63,9 @@ class TC_GAME_API TempSummon : public Creature
     private:
         TempSummonType m_type;
         uint32 m_timer;
+        // lfm corpse despawn delay
+        int corpseDespawnDelay;
+
         uint32 m_lifetime;
         ObjectGuid m_summonerGUID;
         bool m_canFollowOwner;

@@ -485,6 +485,33 @@ void Unit::Update(uint32 p_time)
                 {
                     if (cdiBase.Target->GetTypeId() == TypeID::TYPEID_PLAYER || cdiBase.Target->GetTypeId() == TypeID::TYPEID_UNIT)
                     {
+                        // lfm dk dancing weapon
+                        if (Player* attackerPlayer = ToPlayer())
+                        {
+                            if (attackerPlayer->GetClass() == Classes::CLASS_DEATH_KNIGHT)
+                            {
+                                for (ControlList::const_iterator itr = m_Controlled.begin(); itr != m_Controlled.end(); ++itr) // Find Rune Weapon
+                                {
+                                    if (Unit* eachPet = *itr)
+                                    {
+                                        if (eachPet->GetEntry() == 27893)
+                                        {
+                                            CalcDamageInfo cdDRW;
+                                            CalculateMeleeDamage(cdiBase.Target, &cdDRW, BASE_ATTACK);
+                                            cdDRW.Attacker = eachPet;
+                                            cdDRW.CleanDamage = cdiBase.CleanDamage / 2;
+                                            cdDRW.Damages->Damage = cdiBase.Damages->Damage / 2;
+                                            eachPet->SendAttackStateUpdate(&cdDRW);
+                                            DealMeleeDamage(&cdDRW, true);
+                                            DamageInfo diDRW(cdDRW);
+                                            Unit::ProcSkillsAndAuras(cdDRW.Attacker, cdDRW.Target, cdDRW.ProcAttacker, cdDRW.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, diDRW.GetHitMask(), nullptr, &diDRW, nullptr);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         DealMeleeDamage(&cdiBase, true);
                         DamageInfo dmgInfo(cdiBase);
                         Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
