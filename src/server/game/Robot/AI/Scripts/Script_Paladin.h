@@ -61,7 +61,7 @@ public:
     bool Heal(Unit* pmTarget);
     bool Cure(Unit* pmTarget);
     bool Buff(Unit* pmTarget, bool pmCure = true);
-
+    bool Revive();
     bool DPS_Retribution(Unit* pmTarget, bool pmChase);
     bool DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE = false);
 

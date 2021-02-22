@@ -25,7 +25,6 @@ AI_Base::AI_Base(Player* pmMe)
     eatDelay = 0;
     drinkDelay = 0;
     engageDelay = 0;
-
     switch (me->GetClass())
     {
     case Classes::CLASS_WARRIOR:
@@ -281,6 +280,19 @@ void AI_Base::Update(uint32 pmDiff)
                             }
                         }
                     }
+                }
+                if (reviveDelay > 0)
+                {
+                    reviveDelay -= pmDiff;
+                    if (!sb->Revive())
+                    {
+                        reviveDelay = 0;
+                    }
+                    if (reviveDelay <= 0)
+                    {
+                        sb->ogReviveTarget = ObjectGuid::Empty;
+                    }
+                    return;
                 }
                 if (staying)
                 {

@@ -81,6 +81,59 @@ void Script_Paladin::Reset()
     Script_Base::Reset();
 }
 
+bool Script_Paladin::Revive()
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false))
+    {
+        return true;
+    }
+    if (ogReviveTarget.IsEmpty())
+    {
+        if (Group* myGroup = me->GetGroup())
+        {
+            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                if (Player* member = groupRef->GetSource())
+                {
+                    if (!member->IsAlive())
+                    {
+                        float targetDistance = me->GetDistance(member);
+                        if (targetDistance < HEAL_MAX_DISTANCE)
+                        {
+                            ogReviveTarget = member->GetGUID();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Player* targetPlayer = ObjectAccessor::GetPlayer(*me, ogReviveTarget);
+    if (!targetPlayer)
+    {
+        return false;
+    }
+    if (targetPlayer->IsAlive())
+    {
+        return false;
+    }
+    float targetDistance = me->GetDistance(targetPlayer);
+    if (targetDistance > HEAL_MAX_DISTANCE)
+    {
+        return false;
+    }
+    CastSpell(targetPlayer, "Redemption");
+    return true;
+}
+
 bool Script_Paladin::Heal(Unit* pmTarget)
 {
     if (!me)

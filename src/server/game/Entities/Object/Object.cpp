@@ -1143,31 +1143,41 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
 
 float WorldObject::GetDistance(WorldObject const* obj) const
 {
-    float d = GetExactDist(obj) - GetCombatReach() - obj->GetCombatReach();
+    // lfm use scale instead of combat reach in distance calculation 
+    //float d = GetExactDist(obj) - GetCombatReach() - obj->GetCombatReach();
+    float d = GetExactDist(obj) - GetObjectScale() - obj->GetObjectScale();
     return d > 0.0f ? d : 0.0f;
 }
 
 float WorldObject::GetDistance(Position const& pos) const
 {
-    float d = GetExactDist(&pos) - GetCombatReach();
+    // lfm use scale instead of combat reach in distance calculation 
+    //float d = GetExactDist(&pos) - GetCombatReach();
+    float d = GetExactDist(&pos) - GetObjectScale();
     return d > 0.0f ? d : 0.0f;
 }
 
 float WorldObject::GetDistance(float x, float y, float z) const
 {
-    float d = GetExactDist(x, y, z) - GetCombatReach();
+    // lfm use scale instead of combat reach in distance calculation 
+    //float d = GetExactDist(x, y, z) - GetCombatReach();
+    float d = GetExactDist(x, y, z) - GetObjectScale();
     return d > 0.0f ? d : 0.0f;
 }
 
 float WorldObject::GetDistance2d(WorldObject const* obj) const
 {
-    float d = GetExactDist2d(obj) - GetCombatReach() - obj->GetCombatReach();
+    // lfm use scale instead of combat reach in distance calculation 
+    //float d = GetExactDist2d(obj) - GetCombatReach() - obj->GetCombatReach();
+    float d = GetExactDist2d(obj) - GetObjectScale() - obj->GetObjectScale();
     return d > 0.0f ? d : 0.0f;
 }
 
 float WorldObject::GetDistance2d(float x, float y) const
 {
-    float d = GetExactDist2d(x, y) - GetCombatReach();
+    // lfm use scale instead of combat reach in distance calculation 
+    //float d = GetExactDist2d(x, y) - GetCombatReach();
+    float d = GetExactDist2d(x, y) - GetObjectScale();
     return d > 0.0f ? d : 0.0f;
 }
 

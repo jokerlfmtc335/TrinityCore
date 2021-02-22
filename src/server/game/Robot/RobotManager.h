@@ -40,11 +40,11 @@
 #endif
 
 #ifndef MELEE_MIN_DISTANCE
-# define MELEE_MIN_DISTANCE 0.5f
+# define MELEE_MIN_DISTANCE 0.4f
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
-# define MELEE_MAX_DISTANCE 2.0f
+# define MELEE_MAX_DISTANCE 1.5f
 #endif
 
 #ifndef RANGED_NORMAL_DISTANCE

@@ -56,6 +56,7 @@ public:
     virtual bool GroupHeal(float pmMaxHealthPercent = 60.0f);
     virtual bool Buff(Unit* pmTarget, bool pmCure = true);
     virtual bool Assist();
+    virtual bool Revive();
     virtual void Update(uint32 pmDiff);
 
     void PetAttack(Unit* pmTarget);
@@ -89,5 +90,6 @@ public:
     float chaseDistanceMin;
     float chaseDistanceMax;
     int rti;
+    ObjectGuid ogReviveTarget;
 };
 #endif

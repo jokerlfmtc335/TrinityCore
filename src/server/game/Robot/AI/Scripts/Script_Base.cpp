@@ -330,6 +330,7 @@ Script_Base::Script_Base(Player* pmMe)
     chaseDistanceMax = MELEE_MAX_DISTANCE;
 
     rti = -1;
+    ogReviveTarget = ObjectGuid::Empty;
 }
 
 void Script_Base::Initialize()
@@ -363,6 +364,11 @@ void Script_Base::Reset()
     rti = -1;
     rm->ResetMovement();
     ClearTarget();
+}
+
+bool Script_Base::Revive()
+{
+    return false;
 }
 
 void Script_Base::Update(uint32 pmDiff)

@@ -62,5 +62,6 @@ public:
     uint32 actionType;
     int actionDelay;
     int assistDelay;
+    int reviveDelay;
 };
 #endif

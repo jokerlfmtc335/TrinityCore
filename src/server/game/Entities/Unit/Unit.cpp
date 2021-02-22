@@ -384,6 +384,10 @@ Unit::Unit(bool isWorldObject) :
     _isWalkingBeforeCharm = false;
     _instantCast = false;
     _isIgnoringCombat = false;
+
+    // lfm melee delay
+    ogCDIBaseTarget = ObjectGuid::Empty;
+    ogCDIOffTarget = ObjectGuid::Empty;
 }
 
 ////////////////////////////////////////////////////////////
@@ -479,17 +483,11 @@ void Unit::Update(uint32 p_time)
         cdiBase.delay -= p_time;
         if (cdiBase.delay <= 0)
         {
-            if (cdiBase.Attacker && cdiBase.Target)
+            if (Unit* cdiTarget = ObjectAccessor::GetUnit(*this, ogCDIBaseTarget))
             {
-                if (cdiBase.Attacker->GetTypeId() == TypeID::TYPEID_PLAYER || cdiBase.Attacker->GetTypeId() == TypeID::TYPEID_UNIT)
-                {
-                    if (cdiBase.Target->GetTypeId() == TypeID::TYPEID_PLAYER || cdiBase.Target->GetTypeId() == TypeID::TYPEID_UNIT)
-                    {
-                        DealMeleeDamage(&cdiBase, true);
-                        DamageInfo dmgInfo(cdiBase);
-                        Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
-                    }
-                }
+                DealMeleeDamage(&cdiBase, true);
+                DamageInfo dmgInfo(cdiBase);
+                Unit::ProcSkillsAndAuras(cdiBase.Attacker, cdiBase.Target, cdiBase.ProcAttacker, cdiBase.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
             }
             cdiBase.delay = 0;
         }
@@ -499,17 +497,11 @@ void Unit::Update(uint32 p_time)
         cdiOff.delay -= p_time;
         if (cdiOff.delay <= 0)
         {
-            if (cdiOff.Attacker && cdiOff.Target)
+            if (Unit* cdiTarget = ObjectAccessor::GetUnit(*this, ogCDIOffTarget))
             {
-                if (cdiOff.Attacker->GetTypeId() == TypeID::TYPEID_PLAYER || cdiOff.Attacker->GetTypeId() == TypeID::TYPEID_UNIT)
-                {
-                    if (cdiOff.Target->GetTypeId() == TypeID::TYPEID_PLAYER || cdiOff.Target->GetTypeId() == TypeID::TYPEID_UNIT)
-                    {
-                        DealMeleeDamage(&cdiOff, true);
-                        DamageInfo dmgInfo(cdiOff);
-                        Unit::ProcSkillsAndAuras(cdiOff.Attacker, cdiOff.Target, cdiOff.ProcAttacker, cdiOff.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
-                    }
-                }
+                DealMeleeDamage(&cdiOff, true);
+                DamageInfo dmgInfo(cdiOff);
+                Unit::ProcSkillsAndAuras(cdiOff.Attacker, cdiOff.Target, cdiOff.ProcAttacker, cdiOff.ProcVictim, PROC_SPELL_TYPE_NONE, PROC_SPELL_PHASE_NONE, dmgInfo.GetHitMask(), nullptr, &dmgInfo, nullptr);
             }
             cdiOff.delay = 0;
         }
@@ -2152,6 +2144,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
         {
             cdiBase = damageInfo;
             cdiBase.delay = delay;
+            ogCDIBaseTarget = damageInfo.Target->GetGUID();
             // lfm dk dancing weapon
             if (Player* attackerPlayer = ToPlayer())
             {
@@ -2171,6 +2164,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
                                 eachPet->SendAttackStateUpdate(&cdiDRW);
                                 cdiDRW.delay = delay;
                                 eachPet->cdiBase = cdiDRW;
+                                eachPet->ogCDIBaseTarget = cdiDRW.Target->GetGUID();
                                 break;
                             }
                         }
@@ -2182,6 +2176,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
         {
             cdiOff = damageInfo;
             cdiOff.delay = delay;
+            ogCDIOffTarget = damageInfo.Target->GetGUID();
             // lfm dk dancing weapon
             if (Player* attackerPlayer = ToPlayer())
             {
@@ -2201,6 +2196,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
                                 eachPet->SendAttackStateUpdate(&cdiDRW);
                                 cdiDRW.delay = delay;
                                 eachPet->cdiOff = cdiDRW;
+                                eachPet->ogCDIOffTarget = cdiDRW.Target->GetGUID();
                                 break;
                             }
                         }

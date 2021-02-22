@@ -34,8 +34,6 @@ m_timer(0), m_lifetime(0), m_canFollowOwner(true), m_visibleBySummonerOnly(false
         m_summonerGUID = owner->GetGUID();
 
     m_unitTypeMask |= UNIT_MASK_SUMMON;
-
-    corpseDespawnDelay = 5000;
 }
 
 WorldObject* TempSummon::GetSummoner() const
@@ -124,11 +122,7 @@ void TempSummon::Update(uint32 diff)
             // if m_deathState is DEAD, CORPSE was skipped
             if (m_deathState == CORPSE)
             {
-                corpseDespawnDelay -= diff;
-                if (corpseDespawnDelay < 0)
-                {
-                    UnSummon();
-                }
+                UnSummon();
                 return;
             }
 
@@ -138,11 +132,7 @@ void TempSummon::Update(uint32 diff)
         {
             if (m_deathState == CORPSE)
             {
-                corpseDespawnDelay -= diff;
-                if (corpseDespawnDelay < 0)
-                {
-                    UnSummon();
-                }
+                UnSummon();
                 return;
             }
 

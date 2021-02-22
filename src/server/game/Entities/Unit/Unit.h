@@ -740,6 +740,8 @@ class TC_GAME_API Unit : public WorldObject
 public:
     CalcDamageInfo cdiBase;
     CalcDamageInfo cdiOff;
+    ObjectGuid ogCDIBaseTarget;
+    ObjectGuid ogCDIOffTarget;
 
     public:
         typedef std::set<Unit*> AttackerSet;

@@ -1854,69 +1854,7 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                     {
                         if (pmReceiver->IsAlive())
                         {
-                            std::unordered_map<uint32, Player*> deadMap;
-                            std::unordered_map<uint32, Player*> targetingMap;
-                            if (Group* myGroup = pmReceiver->GetGroup())
-                            {
-                                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                                {
-                                    if (Player* member = groupRef->GetSource())
-                                    {
-                                        if (!member->IsAlive())
-                                        {
-                                            deadMap[member->GetGUID().GetCounter()] = member;
-                                        }
-                                        else
-                                        {
-                                            if (member->IsNonMeleeSpellCast(false))
-                                            {
-                                                if (Player* targetPlayer = member->GetSelectedPlayer())
-                                                {
-                                                    targetingMap[targetPlayer->GetGUID().GetCounter()] = targetPlayer;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (deadMap.size() > 0)
-                            {
-                                for (std::unordered_map<uint32, Player*>::iterator dIT = deadMap.begin(); dIT != deadMap.end(); dIT++)
-                                {
-                                    if (Player* eachDead = dIT->second)
-                                    {
-                                        if (targetingMap.find(eachDead->GetGUID().GetCounter()) == targetingMap.end())
-                                        {
-                                            std::ostringstream reviveSpellName;
-                                            if (pmReceiver->GetClass() == Classes::CLASS_DRUID || pmReceiver->GetClass() == Classes::CLASS_PRIEST || pmReceiver->GetClass() == Classes::CLASS_PALADIN || pmReceiver->GetClass() == Classes::CLASS_SHAMAN)
-                                            {
-                                                if (pmReceiver->GetClass() == Classes::CLASS_PRIEST)
-                                                {
-                                                    reviveSpellName << "Resurrection";
-                                                }
-                                                else if (pmReceiver->GetClass() == Classes::CLASS_PALADIN)
-                                                {
-                                                    reviveSpellName << "Redemption";
-                                                }
-                                                else if (pmReceiver->GetClass() == Classes::CLASS_SHAMAN)
-                                                {
-                                                    reviveSpellName << "Ancestral Spirit";
-                                                }
-                                                if (receiverAI->sb->CastSpell(eachDead, reviveSpellName.str(), RANGED_MAX_DISTANCE, false, false, true))
-                                                {
-                                                    std::ostringstream replyStream;
-                                                    replyStream << "Reviving " << eachDead->GetName();
-                                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-                                                }
-                                                else
-                                                {
-                                                    WhisperTo(pmSender, "Can not do reviving", Language::LANG_UNIVERSAL, pmReceiver);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            receiverAI->reviveDelay = 2000;
                         }
                     }
                     else if (commandName == "follow")
@@ -2676,11 +2614,65 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
     {
         if (Group* myGroup = pmSender->GetGroup())
         {
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            if (commandName == "revive")
             {
-                if (Player* member = groupRef->GetSource())
+                std::unordered_map<uint32, Player*> deadMap;
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
-                    HandleChatCommand(pmSender, pmCMD, member);
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (!member->IsAlive())
+                        {
+                            deadMap[member->GetGUID().GetCounter()] = member;
+                        }
+                    }
+                }
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (member->IsAlive())
+                        {
+                            if (!member->IsInCombat())
+                            {
+                                if (member->GetClass() == Classes::CLASS_DRUID || member->GetClass() == Classes::CLASS_PRIEST || member->GetClass() == Classes::CLASS_PALADIN || member->GetClass() == Classes::CLASS_SHAMAN)
+                                {
+                                    float manaRate = member->GetPower(Powers::POWER_MANA) * 100 / member->GetMaxPower(Powers::POWER_MANA);
+                                    if (manaRate > 40)
+                                    {
+                                        for (std::unordered_map<uint32, Player*>::iterator dIT = deadMap.begin(); dIT != deadMap.end(); dIT++)
+                                        {
+                                            if (Player* eachDead = dIT->second)
+                                            {
+                                                if (member->GetDistance(eachDead) < HEAL_MAX_DISTANCE)
+                                                {
+                                                    if (AI_Base* memberAI = member->robotAI)
+                                                    {
+                                                        if (Script_Base* sb = memberAI->sb)
+                                                        {
+                                                            sb->ogReviveTarget = eachDead->GetGUID();
+                                                            HandleChatCommand(pmSender, pmCMD, member);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        HandleChatCommand(pmSender, pmCMD, member);
+                    }
                 }
             }
         }

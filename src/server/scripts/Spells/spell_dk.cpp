@@ -789,9 +789,10 @@ class spell_dk_dancing_rune_weapon : public SpellScriptLoader
                 if (Unit* eventTarget = eventInfo.GetProcTarget())
                 {
                     drw->Attack(eventTarget, true);
-                    int32 amount = static_cast<int32>(damageInfo->GetDamage()) / 2;
-                    drw->SendSpellNonMeleeDamageLog(drw->GetVictim(), spellInfo->Id, amount, spellInfo->GetSchoolMask(), 0, 0, false, 0, false);
-                    Unit::DealDamage(drw, drw->GetVictim(), amount, nullptr, SPELL_DIRECT_DAMAGE, spellInfo->GetSchoolMask(), spellInfo, true);
+                    drw->CastSpell(eventTarget, spellInfo->Id, aurEff);
+                    //int32 amount = static_cast<int32>(damageInfo->GetDamage()) / 2;
+                    //drw->SendSpellNonMeleeDamageLog(eventTarget, spellInfo->Id, amount, spellInfo->GetSchoolMask(), 0, 0, false, 0, false);
+                    //Unit::DealDamage(drw, eventTarget, amount, nullptr, SPELL_DIRECT_DAMAGE, spellInfo->GetSchoolMask(), spellInfo, true);
                 }
             }
 
@@ -960,8 +961,13 @@ class spell_dk_death_grip : public SpellScriptLoader
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
                 if (Unit* target = GetHitUnit())
+                {
                     if (!target->HasAuraType(SPELL_AURA_DEFLECT_SPELLS)) // Deterrence
+                    {
                         target->CastSpell(GetExplTargetDest()->GetPosition(), GetEffectValue(), true);
+                        target->InterruptNonMeleeSpells(false);
+                    }
+                }
             }
 
             void Register() override
