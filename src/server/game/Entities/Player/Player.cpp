@@ -410,7 +410,7 @@ Player::Player(WorldSession* session): Unit(true)
 
     // lfm auto fishing
     fishingDelay = 0;
-    AI_Base* robotAI;
+    robotAI = nullptr;
 }
 
 Player::~Player()
