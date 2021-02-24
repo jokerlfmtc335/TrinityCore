@@ -47,6 +47,7 @@ enum PaladinSealType :uint32
 {
     PaladinSealType_Righteousness = 0,
     PaladinSealType_Justice = 1,
+    PaladinSealType_Command = 2,
 };
 
 class Script_Paladin :public Script_Base
@@ -62,7 +63,7 @@ public:
     bool Cure(Unit* pmTarget);
     bool Buff(Unit* pmTarget, bool pmCure = true);
     bool Revive();
-    bool DPS_Retribution(Unit* pmTarget, bool pmChase);
+    bool DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE = false);
     bool DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE = false);
 
     bool Heal_Holy(Unit* pmTarget);
@@ -78,5 +79,8 @@ public:
     uint32 righteousFuryDelay;
     uint32 hammerOfJusticeDelay;
     uint32 sealDelay;
+    uint32 exorcismDelay;
+    uint32 crusaderStrikeDelay;
+    uint32 avengingWrathDelay;
 };
 #endif

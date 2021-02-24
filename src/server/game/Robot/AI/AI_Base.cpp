@@ -287,6 +287,7 @@ void AI_Base::Update(uint32 pmDiff)
                     if (!sb->Revive())
                     {
                         reviveDelay = 0;
+                        sb->ogReviveTarget = ObjectGuid::Empty;
                     }
                     if (reviveDelay <= 0)
                     {

@@ -899,7 +899,6 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                 bool paladinBlessing_might = false;
                 bool paladinBlessing_wisdom = false;
 
-                bool paladinSeal_Righteousness = false;
                 bool paladinSeal_Justice = false;
 
                 int rtiIndex = 0;
@@ -1006,15 +1005,16 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                             sp->sealType = PaladinSealType::PaladinSealType_Justice;
                                             paladinSeal_Justice = true;
                                         }
-                                        else if (!paladinSeal_Righteousness)
-                                        {
-                                            sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
-                                            paladinSeal_Righteousness = true;
-                                        }
                                         else
                                         {
-                                            sp->sealType = PaladinSealType::PaladinSealType_Justice;
-                                            paladinSeal_Justice = true;
+                                            if (sp->FindSpellID("Seal of Command"))
+                                            {
+                                                sp->sealType = PaladinSealType::PaladinSealType_Command;
+                                            }
+                                            else
+                                            {
+                                                sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
+                                            }
                                         }
                                     }
                                     switch (sp->blessingType)
@@ -2446,6 +2446,10 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                     {
                                         sp->sealType = PaladinSealType::PaladinSealType_Justice;
                                     }
+                                    else if (sealTypeName == "command")
+                                    {
+                                        sp->sealType = PaladinSealType::PaladinSealType_Command;
+                                    }
                                     else
                                     {
                                         replyStream << "Unknown type";
@@ -2461,6 +2465,11 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                 case PaladinSealType::PaladinSealType_Justice:
                                 {
                                     replyStream << "justice";
+                                    break;
+                                }
+                                case PaladinSealType::PaladinSealType_Command:
+                                {
+                                    replyStream << "command";
                                     break;
                                 }
                                 default:
@@ -2616,17 +2625,18 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
         {
             if (commandName == "revive")
             {
-                std::unordered_map<uint32, Player*> deadMap;
+                std::unordered_set<ObjectGuid> deadOGSet;
                 for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
                     if (Player* member = groupRef->GetSource())
                     {
                         if (!member->IsAlive())
                         {
-                            deadMap[member->GetGUID().GetCounter()] = member;
+                            deadOGSet.insert(member->GetGUID());
                         }
                     }
                 }
+                std::unordered_set<ObjectGuid> revivingOGSet;
                 for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
                     if (Player* member = groupRef->GetSource())
@@ -2640,19 +2650,30 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                                     float manaRate = member->GetPower(Powers::POWER_MANA) * 100 / member->GetMaxPower(Powers::POWER_MANA);
                                     if (manaRate > 40)
                                     {
-                                        for (std::unordered_map<uint32, Player*>::iterator dIT = deadMap.begin(); dIT != deadMap.end(); dIT++)
+                                        for (std::unordered_set<ObjectGuid>::iterator dIT = deadOGSet.begin(); dIT != deadOGSet.end(); dIT++)
                                         {
-                                            if (Player* eachDead = dIT->second)
+                                            if (ObjectGuid ogEachDead = *dIT)
                                             {
-                                                if (member->GetDistance(eachDead) < HEAL_MAX_DISTANCE)
+                                                if (revivingOGSet.find(ogEachDead) == revivingOGSet.end())
                                                 {
-                                                    if (AI_Base* memberAI = member->robotAI)
+                                                    if (Player* eachDead = ObjectAccessor::GetPlayer(*member, ogEachDead))
                                                     {
-                                                        if (Script_Base* sb = memberAI->sb)
+                                                        if (member->GetDistance(eachDead) < HEAL_MAX_DISTANCE)
                                                         {
-                                                            sb->ogReviveTarget = eachDead->GetGUID();
-                                                            HandleChatCommand(pmSender, pmCMD, member);
-                                                            break;
+                                                            if (AI_Base* memberAI = member->robotAI)
+                                                            {
+                                                                if (Script_Base* sb = memberAI->sb)
+                                                                {
+                                                                    sb->ogReviveTarget = eachDead->GetGUID();
+                                                                    HandleChatCommand(pmSender, pmCMD, member);
+                                                                    revivingOGSet.insert(eachDead->GetGUID());
+                                                                    std::ostringstream replyStream;
+                                                                    replyStream << "Try to revive ";
+                                                                    replyStream << eachDead->GetName();
+                                                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
+                                                                    break;
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
