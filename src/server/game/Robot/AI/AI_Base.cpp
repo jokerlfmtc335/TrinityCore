@@ -25,6 +25,7 @@ AI_Base::AI_Base(Player* pmMe)
     eatDelay = 0;
     drinkDelay = 0;
     engageDelay = 0;
+    reviveDelay = 0;
     switch (me->GetClass())
     {
     case Classes::CLASS_WARRIOR:
@@ -82,6 +83,7 @@ AI_Base::AI_Base(Player* pmMe)
 
 void AI_Base::Reset()
 {
+    reviveDelay = 0;
     engageDelay = 0;
     combatTime = 0;
     teleportAssembleDelay = 0;

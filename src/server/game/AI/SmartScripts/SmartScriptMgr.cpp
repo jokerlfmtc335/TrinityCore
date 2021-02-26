@@ -280,6 +280,15 @@ void SmartAIMgr::LoadSmartAIFromDB()
         temp.target.z = fields[27].GetFloat();
         temp.target.o = fields[28].GetFloat();
 
+        // lfm smart_scripts correction
+        if (temp.entryOrGuid == 24718 || temp.entryOrGuid == 23673 || temp.entryOrGuid == 23672 || temp.entryOrGuid == 23675 || temp.entryOrGuid == 24271)
+        {
+            if (temp.action.type == SMART_ACTION::SMART_ACTION_CALL_TIMED_ACTIONLIST)
+            {
+                temp.action.raw.param3 = 1;
+            }
+        }
+
         //check target
         if (!IsTargetValid(temp))
             continue;
