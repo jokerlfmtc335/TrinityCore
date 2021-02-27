@@ -958,7 +958,7 @@ class spell_dk_death_grip : public SpellScriptLoader
         {
             PrepareSpellScript(spell_dk_death_grip_SpellScript);
 
-            void HandleDummy(SpellEffIndex /*effIndex*/)
+            void HandleDummy(SpellEffIndex effIndex)
             {
                 if (Unit* target = GetHitUnit())
                 {
@@ -966,10 +966,6 @@ class spell_dk_death_grip : public SpellScriptLoader
                     {
                         target->CastSpell(GetExplTargetDest()->GetPosition(), GetEffectValue(), true);
                         target->InterruptNonMeleeSpells(false);
-                        if (Unit* caster = GetCaster())
-                        {
-                            caster->CastSpell(target, 49560);
-                        }
                     }
                 }
             }
@@ -978,7 +974,6 @@ class spell_dk_death_grip : public SpellScriptLoader
             {
                 OnEffectHitTarget += SpellEffectFn(spell_dk_death_grip_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
-
         };
 
         SpellScript* GetSpellScript() const override
