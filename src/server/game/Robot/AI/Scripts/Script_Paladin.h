@@ -82,5 +82,8 @@ public:
     uint32 exorcismDelay;
     uint32 crusaderStrikeDelay;
     uint32 avengingWrathDelay;
+    uint32 divineStormDelay;
+    uint32 layOnHandsDelay;
+    uint32 handOfProtectionDelay;
 };
 #endif

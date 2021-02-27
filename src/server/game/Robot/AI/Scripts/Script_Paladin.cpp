@@ -13,69 +13,87 @@ Script_Paladin::Script_Paladin(Player* pmMe) :Script_Base(pmMe)
     judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
     sealType = PaladinSealType::PaladinSealType_Righteousness;
 
-    judgementDelay = 300000;
-    consecrationDelay = 300000;
-    hammerOfWrathDelay = 300000;
-    righteousFuryDelay = 300000;
-    hammerOfJusticeDelay = 300000;
-    sealDelay = 300000;
-    exorcismDelay = 300000;
-    crusaderStrikeDelay = 300000;
-    avengingWrathDelay = 300000;
+    judgementDelay = 3000000;
+    consecrationDelay = 3000000;
+    hammerOfWrathDelay = 3000000;
+    righteousFuryDelay = 3000000;
+    hammerOfJusticeDelay = 3000000;
+    sealDelay = 3000000;
+    exorcismDelay = 3000000;
+    crusaderStrikeDelay = 3000000;
+    avengingWrathDelay = 3000000;
+    layOnHandsDelay = 3000000;
+    handOfProtectionDelay = 3000000;
+    divineStormDelay = 3000000;
 }
 
 void Script_Paladin::Update(uint32 pmDiff)
 {
     Script_Base::Update(pmDiff);
-    if (judgementDelay < 300000)
+    if (judgementDelay < 3000000)
     {
         judgementDelay += pmDiff;
     }
-    if (consecrationDelay < 300000)
+    if (consecrationDelay < 3000000)
     {
         consecrationDelay += pmDiff;
     }
-    if (hammerOfWrathDelay < 300000)
+    if (hammerOfWrathDelay < 3000000)
     {
         hammerOfWrathDelay += pmDiff;
     }
-    if (righteousFuryDelay < 300000)
+    if (righteousFuryDelay < 3000000)
     {
         righteousFuryDelay += pmDiff;
     }
-    if (hammerOfJusticeDelay < 300000)
+    if (hammerOfJusticeDelay < 3000000)
     {
         hammerOfJusticeDelay += pmDiff;
     }
-    if (sealDelay < 300000)
+    if (sealDelay < 3000000)
     {
         sealDelay += pmDiff;
     }
-    if (exorcismDelay < 300000)
+    if (exorcismDelay < 3000000)
     {
         exorcismDelay += pmDiff;
     }
-    if (crusaderStrikeDelay < 300000)
+    if (crusaderStrikeDelay < 3000000)
     {
         crusaderStrikeDelay += pmDiff;
     }
-    if (avengingWrathDelay < 300000)
+    if (avengingWrathDelay < 3000000)
     {
         avengingWrathDelay += pmDiff;
+    }
+    if (layOnHandsDelay < 3000000)
+    {
+        layOnHandsDelay += pmDiff;
+    }
+    if (handOfProtectionDelay < 3000000)
+    {
+        handOfProtectionDelay += pmDiff;
+    }
+    if (divineStormDelay < 3000000)
+    {
+        divineStormDelay += pmDiff;
     }
 }
 
 void Script_Paladin::Reset()
 {
-    judgementDelay = 300000;
-    consecrationDelay = 300000;
-    hammerOfWrathDelay = 300000;
-    righteousFuryDelay = 300000;
-    hammerOfJusticeDelay = 300000;
-    sealDelay = 300000;
-    exorcismDelay = 300000;
-    crusaderStrikeDelay = 300000;
-    avengingWrathDelay = 300000;
+    judgementDelay = 3000000;
+    consecrationDelay = 3000000;
+    hammerOfWrathDelay = 3000000;
+    righteousFuryDelay = 3000000;
+    hammerOfJusticeDelay = 3000000;
+    sealDelay = 3000000;
+    exorcismDelay = 3000000;
+    crusaderStrikeDelay = 3000000;
+    avengingWrathDelay = 3000000;
+    layOnHandsDelay = 3000000;
+    handOfProtectionDelay = 3000000;
+    divineStormDelay = 3000000;
 
     judgementType = PaladinJudgementType::PaladinJudgementType_Justice;
     sealType = PaladinSealType::PaladinSealType_Righteousness;
@@ -219,19 +237,36 @@ bool Script_Paladin::Heal_Holy(Unit* pmTarget)
             {
                 if (myLevel >= 10)
                 {
-                    if (CastSpell(pmTarget, "Lay on Hands", PALADIN_HEAL_DISTANCE))
+                    if (layOnHandsDelay > 961000)
                     {
-                        return true;
+                        if (CastSpell(pmTarget, "Lay on Hands", PALADIN_HEAL_DISTANCE))
+                        {
+                            layOnHandsDelay = 0;
+                            return true;
+                        }
                     }
-                    if (CastSpell(pmTarget, "Hand of Protection", PALADIN_RANGE_DISTANCE))
+                    if (handOfProtectionDelay > 301000)
                     {
-                        return true;
+                        if (Player* targetPlayer = pmTarget->ToPlayer())
+                        {
+                            if (AI_Base* targetAI = targetPlayer->robotAI)
+                            {
+                                if (targetAI->groupRole != GroupRole::GroupRole_Tank)
+                                {
+                                    if (CastSpell(pmTarget, "Hand of Protection", PALADIN_RANGE_DISTANCE))
+                                    {
+                                        handOfProtectionDelay = 0;
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
-    if (healthPCT < 60.0f)
+    if (healthPCT < 70.0f)
     {
         if (me->GetLevel() >= 70)
         {
@@ -255,7 +290,7 @@ bool Script_Paladin::Heal_Holy(Unit* pmTarget)
     }
     if (myLevel >= 20)
     {
-        if (healthPCT < 80.0f)
+        if (healthPCT < 90.0f)
         {
             if (CastSpell(pmTarget, "Flash of Light", PALADIN_HEAL_DISTANCE))
             {
@@ -427,11 +462,15 @@ bool Script_Paladin::Tank(Unit* pmTarget, bool pmChase, bool pmAOE)
                 {
                     if (Unit* eachAttacker = *gaIT)
                     {
-                        if (eachAttacker->GetTarget() != me->GetGUID())
+                        if (eachAttacker->IsAlive())
                         {
-                            if (me->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                            if (me->IsValidAttackTarget(eachAttacker))
                             {
-                                meleeCount++;
+                                float eachAttackerDistance = me->GetDistance(eachAttacker);
+                                if (eachAttackerDistance < AOE_TARGETS_RANGE)
+                                {
+                                    meleeCount++;
+                                }
                             }
                         }
                     }
@@ -536,9 +575,26 @@ bool Script_Paladin::DPS(Unit* pmTarget, bool pmChase, bool pmAOE)
     {
         return false;
     }
+    uint32 myLevel = me->GetLevel();
     if (me->GetHealthPct() < 20.0f)
     {
-        UseHealingPotion();
+        if (!UseHealingPotion())
+        {
+            if (layOnHandsDelay > 1201000)
+            {
+                if (myLevel >= 10)
+                {
+                    if (!sRobotManager->HasAura(me, "Forbearance"))
+                    {
+                        if (CastSpell(me, "Lay on Hands", PALADIN_HEAL_DISTANCE))
+                        {
+                            layOnHandsDelay = 0;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
     }
     if ((me->GetPower(Powers::POWER_MANA) * 100 / me->GetMaxPower(Powers::POWER_MANA)) < 30)
     {
@@ -609,7 +665,7 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
     uint32 myLevel = me->GetLevel();
     if (myLevel >= 70)
     {
-        if (avengingWrathDelay > 181000)
+        if (avengingWrathDelay > 121000)
         {
             if (targetDistance < INTERACTION_DISTANCE)
             {
@@ -623,7 +679,7 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
     }
     if (myLevel >= 44)
     {
-        if (hammerOfWrathDelay > 7000)
+        if (hammerOfWrathDelay > 6500)
         {
             if (pmTarget->GetHealthPct() < 20.0f)
             {
@@ -637,7 +693,7 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
     }
     if (myLevel >= 8)
     {
-        if (hammerOfJusticeDelay > 61000)
+        if (hammerOfJusticeDelay > 60500)
         {
             if (pmTarget->IsNonMeleeSpellCast(false))
             {
@@ -649,30 +705,39 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
             }
         }
     }
+    if (myLevel >= 60)
+    {
+        if (pmAOE)
+        {
+            if (divineStormDelay > 10500)
+            {
+                if (CastSpell(pmTarget, "Divine Storm", MELEE_MAX_DISTANCE))
+                {
+                    divineStormDelay = 0;
+                    return true;
+                }
+            }
+        }
+    }
     if (myLevel >= 20)
     {
-        if (consecrationDelay > 9000)
+        if (consecrationDelay > 8500)
         {
             if (pmAOE)
             {
                 if (Group* myGroup = me->GetGroup())
                 {
-                    Player* mainTank = ObjectAccessor::GetPlayer(*me, myGroup->GetOGByTargetIcon(6));
-                    if (!mainTank)
+                    Player* mainTank = NULL;
+                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                     {
-                        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                        if (Player* member = groupRef->GetSource())
                         {
-                            if (Player* member = groupRef->GetSource())
+                            if (AI_Base* memberAI = member->robotAI)
                             {
-                                if (member->IsAlive())
+                                if (memberAI->groupRole == GroupRole::GroupRole_Tank)
                                 {
-                                    if (AI_Base* memberAI = member->robotAI)
-                                    {
-                                        if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                                        {
-                                            mainTank = member;
-                                        }
-                                    }
+                                    mainTank = member;
+                                    break;
                                 }
                             }
                         }
@@ -688,9 +753,16 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
                                 {
                                     if (Unit* eachAttacker = *gaIT)
                                     {
-                                        if (mainTank->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                                        if (eachAttacker->IsAlive())
                                         {
-                                            meleeCount++;
+                                            if (me->IsValidAttackTarget(eachAttacker))
+                                            {
+                                                float eachAttackerDistance = mainTank->GetDistance(eachAttacker);
+                                                if (eachAttackerDistance < AOE_TARGETS_RANGE)
+                                                {
+                                                    meleeCount++;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -785,7 +857,7 @@ bool Script_Paladin::DPS_Retribution(Unit* pmTarget, bool pmChase, bool pmAOE)
             }
         }
     }
-    if (judgementDelay > 11000)
+    if (judgementDelay > 8500)
     {
         switch (judgementType)
         {
@@ -926,14 +998,12 @@ bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE)
                     {
                         if (Player* member = groupRef->GetSource())
                         {
-                            if (member->IsAlive())
+                            if (AI_Base* memberAI = member->robotAI)
                             {
-                                if (AI_Base* memberAI = member->robotAI)
+                                if (memberAI->groupRole == GroupRole::GroupRole_Tank)
                                 {
-                                    if (memberAI->groupRole == GroupRole::GroupRole_Tank)
-                                    {
-                                        mainTank = member;
-                                    }
+                                    mainTank = member;
+                                    break;
                                 }
                             }
                         }
@@ -950,9 +1020,16 @@ bool Script_Paladin::DPS_Common(Unit* pmTarget, bool pmChase, bool pmAOE)
                             {
                                 if (Unit* eachAttacker = *gaIT)
                                 {
-                                    if (mainTank->GetDistance(eachAttacker) < AOE_TARGETS_RANGE)
+                                    if (eachAttacker->IsAlive())
                                     {
-                                        meleeCount++;
+                                        if (me->IsValidAttackTarget(eachAttacker))
+                                        {
+                                            float eachAttackerDistance = mainTank->GetDistance(eachAttacker);
+                                            if (eachAttackerDistance < AOE_TARGETS_RANGE)
+                                            {
+                                                meleeCount++;
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1241,7 +1318,7 @@ bool Script_Paladin::Buff(Unit* pmTarget, bool pmCure)
 
     if (pmCure)
     {
-        if (myLevel>= 42)
+        if (myLevel >= 42)
         {
             for (uint32 type = SPELL_AURA_NONE; type < TOTAL_AURAS; ++type)
             {

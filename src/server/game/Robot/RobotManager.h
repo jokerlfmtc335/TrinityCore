@@ -132,6 +132,7 @@ public:
 	void TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot);
 	bool EquipNewItem(Player* pmTargetPlayer, uint32 pmItemEntry, uint8 pmEquipSlot);
 	void RandomTeleport(Player* pmTargetPlayer);
+    bool ApplyGlyph(Player* pmTargetPlayer, uint32 pmGlyphItemEntry, uint32 pmSlot);
 
 	bool TankThreatOK(Player* pmTankPlayer, Unit* pmVictim);
 	bool HasAura(Unit* pmTarget, std::string pmSpellName, Unit* pmCaster = NULL);
@@ -155,6 +156,8 @@ public:
 
 	std::unordered_map<uint32, uint32> tamableBeastEntryMap;
 	std::unordered_map<std::string, std::set<uint32>> spellNameEntryMap;
+    std::unordered_set<uint32> warlock2TalentRank0Set;
+    std::unordered_set<uint32> paladin2TalentRank0Set;
 };
 
 #define sRobotManager RobotManager::instance()

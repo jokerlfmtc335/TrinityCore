@@ -20,6 +20,7 @@
 #include "Script_Paladin.h"
 #include "Script_Hunter.h"
 #include "Script_Shaman.h"
+#include "Script_Warlock.h"
 #include "RobotConfig.h"
 
 RobotManager::RobotManager()
@@ -31,6 +32,8 @@ RobotManager::RobotManager()
     tamableBeastEntryMap.clear();
     spellRewardClassQuestIDSet.clear();
     spellNameEntryMap.clear();
+    warlock2TalentRank0Set.clear();
+    paladin2TalentRank0Set.clear();
 }
 
 void RobotManager::InitializeManager()
@@ -205,6 +208,49 @@ void RobotManager::InitializeManager()
     characterTalentTabNameMap[Classes::CLASS_DRUID][0] = "Balance";
     characterTalentTabNameMap[Classes::CLASS_DRUID][1] = "Feral";
     characterTalentTabNameMap[Classes::CLASS_DRUID][2] = "Restoration";
+
+    warlock2TalentRank0Set.clear();
+    warlock2TalentRank0Set.insert(17793);
+    warlock2TalentRank0Set.insert(17788);
+    warlock2TalentRank0Set.insert(18119);
+    warlock2TalentRank0Set.insert(17778);
+    warlock2TalentRank0Set.insert(18126);
+    warlock2TalentRank0Set.insert(17877);
+    warlock2TalentRank0Set.insert(17959);
+    warlock2TalentRank0Set.insert(18135);
+    warlock2TalentRank0Set.insert(34935);
+    warlock2TalentRank0Set.insert(17815);
+    warlock2TalentRank0Set.insert(18130);
+    warlock2TalentRank0Set.insert(17962);
+    warlock2TalentRank0Set.insert(18096);
+    warlock2TalentRank0Set.insert(30288);
+    warlock2TalentRank0Set.insert(30283);
+    warlock2TalentRank0Set.insert(47220);
+    warlock2TalentRank0Set.insert(47266);
+    warlock2TalentRank0Set.insert(50796);
+
+    paladin2TalentRank0Set.clear();
+    paladin2TalentRank0Set.insert(20101);
+    paladin2TalentRank0Set.insert(25956);
+    paladin2TalentRank0Set.insert(20335);
+    paladin2TalentRank0Set.insert(20375);
+    paladin2TalentRank0Set.insert(26022);
+    paladin2TalentRank0Set.insert(20117);
+    paladin2TalentRank0Set.insert(32043);
+    paladin2TalentRank0Set.insert(31866);
+    paladin2TalentRank0Set.insert(31869);
+    paladin2TalentRank0Set.insert(20111);
+    paladin2TalentRank0Set.insert(20049);
+    paladin2TalentRank0Set.insert(9452);
+    paladin2TalentRank0Set.insert(53486);
+    paladin2TalentRank0Set.insert(20066);
+    paladin2TalentRank0Set.insert(31879);
+    paladin2TalentRank0Set.insert(53375);
+    paladin2TalentRank0Set.insert(35395);
+    paladin2TalentRank0Set.insert(53379);
+    paladin2TalentRank0Set.insert(53380);
+    paladin2TalentRank0Set.insert(20042);
+    paladin2TalentRank0Set.insert(53385);
 
     spellRewardClassQuestIDSet.clear();
     std::unordered_map<uint32, Quest>  qTemplates = sObjectMgr->GetQuestTemplates();
@@ -395,6 +441,11 @@ uint32 RobotManager::GetCharacterRace(uint32 pmCharacterID)
 uint32 RobotManager::CreateRobotCharacter(uint32 pmAccountID, uint16 pmCampType)
 {
     uint32  targetClass = Classes::CLASS_PALADIN;
+    uint32 classRandom = urand(0, 100);
+    if (classRandom < 50)
+    {
+        targetClass = Classes::CLASS_WARLOCK;
+    }
     uint32 raceIndex = 0;
     uint32 targetRace = 0;
     if (pmCampType == RobotCampType::RobotCampType_Alliance)
@@ -694,6 +745,78 @@ bool RobotManager::PrepareRobot(Player* pmRobot)
         }
     }
 
+    uint32 characterMaxTalentTab = pmRobot->GetMaxTalentCountTab();
+    switch (pmRobot->GetClass())
+    {
+    case Classes::CLASS_WARLOCK:
+    {
+        switch (characterMaxTalentTab)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            break;
+        }
+        case 2:
+        {
+            uint32 g0 = pmRobot->GetGlyph(0);
+            if (g0 == 0)
+            {
+                ApplyGlyph(pmRobot, 56270, 0);
+                //pmTargetPlayer->CastSpell(pmTargetPlayer, 56270);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        break;
+    }
+    case Classes::CLASS_PALADIN:
+    {
+        switch (characterMaxTalentTab)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            break;
+        }
+        case 2:
+        {
+            // Glyph of Exorcism
+            uint32 g0 = pmRobot->GetGlyph(0);
+            if (g0 == 0)
+            {
+                ApplyGlyph(pmRobot, 55118, 0);
+            }
+            // Glyph of Hammer of Wrath
+            uint32 g3 = pmRobot->GetGlyph(3);
+            if (g3 == 0)
+            {
+                ApplyGlyph(pmRobot, 55112, 3);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
     if (!pmRobot->GetGroup())
     {
         for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
@@ -705,6 +828,8 @@ bool RobotManager::PrepareRobot(Player* pmRobot)
         }
     }
     pmRobot->Say("Ready", Language::LANG_UNIVERSAL);
+
+    return true;
 }
 
 std::unordered_set<uint32> RobotManager::GetUsableEquipSlot(const ItemTemplate* pmIT)
@@ -901,6 +1026,10 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
 
                 bool paladinSeal_Justice = false;
 
+                bool warlockCurse_Weakness = false;
+                bool warlockCurse_Tongues = false;
+                bool warlockCurse_Element = false;
+
                 int rtiIndex = 0;
 
                 bool hunterAspect_wild = false;
@@ -1017,298 +1146,124 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                             }
                                         }
                                     }
-                                    switch (sp->blessingType)
+                                    uint32 maxTalentTab = member->GetMaxTalentCountTab();
+                                    if (maxTalentTab == 2)
                                     {
-                                    case PaladinBlessingType::PaladinBlessingType_Kings:
-                                    {
-                                        if (paladinBlessing_kings)
+                                        if (!paladinBlessing_might)
                                         {
-                                            if (!paladinBlessing_might)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                                                paladinBlessing_might = true;
-                                            }
-                                            else if (!paladinBlessing_wisdom)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-                                                paladinBlessing_wisdom = true;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            paladinBlessing_kings = true;
-                                        }
-                                        break;
-                                    }
-                                    case PaladinBlessingType::PaladinBlessingType_Might:
-                                    {
-                                        if (paladinBlessing_might)
-                                        {
-                                            if (!paladinBlessing_kings)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-                                                paladinBlessing_kings = true;
-                                            }
-                                            else if (!paladinBlessing_wisdom)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-                                                paladinBlessing_wisdom = true;
-                                            }
-                                        }
-                                        else
-                                        {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
                                             paladinBlessing_might = true;
                                         }
-                                        break;
-                                    }
-                                    case PaladinBlessingType::PaladinBlessingType_Wisdom:
-                                    {
-                                        if (paladinBlessing_wisdom)
+                                        else if (!paladinBlessing_kings)
                                         {
-                                            if (!paladinBlessing_kings)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-                                                paladinBlessing_kings = true;
-                                            }
-                                            else if (!paladinBlessing_might)
-                                            {
-                                                sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                                                paladinBlessing_might = true;
-                                            }
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+                                            paladinBlessing_kings = true;
                                         }
-                                        else
+                                        else if (!paladinBlessing_wisdom)
                                         {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
                                             paladinBlessing_wisdom = true;
                                         }
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        break;
-                                    }
-                                    }
-                                    switch (sp->auraType)
-                                    {
-                                    case PaladinAuraType::PaladinAuraType_Concentration:
-                                    {
-                                        if (paladinAura_concentration)
-                                        {
-                                            if (!paladinAura_devotion)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                paladinAura_devotion = true;
-                                            }
-                                            else if (!paladinAura_retribution)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                paladinAura_retribution = true;
-                                            }
-                                            else if (!paladinAura_fire)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                paladinAura_fire = true;
-                                            }
-                                            else if (!paladinAura_frost)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                paladinAura_frost = true;
-                                            }
-                                            else if (!paladinAura_shadow)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                paladinAura_shadow = true;
-                                            }
-                                        }
                                         else
                                         {
-                                            paladinAura_concentration = true;
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
+                                            paladinBlessing_might = true;
                                         }
-                                        break;
-                                    }
-                                    case PaladinAuraType::PaladinAuraType_Devotion:
-                                    {
-                                        if (paladinAura_devotion)
+
+                                        if (!paladinAura_retribution)
                                         {
-                                            if (!paladinAura_concentration)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                paladinAura_concentration = true;
-                                            }
-                                            else if (!paladinAura_retribution)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                paladinAura_retribution = true;
-                                            }
-                                            else if (!paladinAura_fire)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                paladinAura_fire = true;
-                                            }
-                                            else if (!paladinAura_frost)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                paladinAura_frost = true;
-                                            }
-                                            else if (!paladinAura_shadow)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                paladinAura_shadow = true;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            paladinAura_devotion = true;
-                                        }
-                                        break;
-                                    }
-                                    case PaladinAuraType::PaladinAuraType_Retribution:
-                                    {
-                                        if (paladinAura_retribution)
-                                        {
-                                            if (!paladinAura_concentration)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                paladinAura_concentration = true;
-                                            }
-                                            else if (!paladinAura_devotion)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                paladinAura_devotion = true;
-                                            }
-                                            else if (!paladinAura_fire)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                paladinAura_fire = true;
-                                            }
-                                            else if (!paladinAura_frost)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                paladinAura_frost = true;
-                                            }
-                                            else if (!paladinAura_shadow)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                paladinAura_shadow = true;
-                                            }
-                                        }
-                                        else
-                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
                                             paladinAura_retribution = true;
                                         }
-                                        break;
-                                    }
-                                    case PaladinAuraType::PaladinAuraType_FireResistant:
-                                    {
-                                        if (paladinAura_fire)
+                                        else if (!paladinAura_concentration)
                                         {
-                                            if (!paladinAura_concentration)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                paladinAura_concentration = true;
-                                            }
-                                            else if (!paladinAura_devotion)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                paladinAura_devotion = true;
-                                            }
-                                            else if (!paladinAura_retribution)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                paladinAura_retribution = true;
-                                            }
-                                            else if (!paladinAura_frost)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                paladinAura_frost = true;
-                                            }
-                                            else if (!paladinAura_shadow)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                paladinAura_shadow = true;
-                                            }
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
+                                            paladinAura_concentration = true;
                                         }
-                                        else
+                                        else if (!paladinAura_devotion)
                                         {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
+                                            paladinAura_devotion = true;
+                                        }
+                                        else if (!paladinAura_fire)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
                                             paladinAura_fire = true;
                                         }
-                                        break;
-                                    }
-                                    case PaladinAuraType::PaladinAuraType_FrostResistant:
-                                    {
-                                        if (paladinAura_frost)
+                                        else if (!paladinAura_frost)
                                         {
-                                            if (!paladinAura_concentration)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                paladinAura_concentration = true;
-                                            }
-                                            else if (!paladinAura_devotion)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                paladinAura_devotion = true;
-                                            }
-                                            else if (!paladinAura_retribution)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                paladinAura_retribution = true;
-                                            }
-                                            else if (!paladinAura_fire)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                paladinAura_fire = true;
-                                            }
-                                            else if (!paladinAura_shadow)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                                paladinAura_shadow = true;
-                                            }
-                                        }
-                                        else
-                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
                                             paladinAura_frost = true;
                                         }
-                                        break;
-                                    }
-                                    case PaladinAuraType::PaladinAuraType_ShadowResistant:
-                                    {
-                                        if (paladinAura_shadow)
+                                        else if (!paladinAura_shadow)
                                         {
-                                            if (!paladinAura_concentration)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                                paladinAura_concentration = true;
-                                            }
-                                            else if (!paladinAura_devotion)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                                paladinAura_devotion = true;
-                                            }
-                                            else if (!paladinAura_retribution)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                                paladinAura_retribution = true;
-                                            }
-                                            else if (!paladinAura_fire)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                                paladinAura_fire = true;
-                                            }
-                                            else if (!paladinAura_frost)
-                                            {
-                                                sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                                paladinAura_frost = true;
-                                            }
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
+                                            paladinAura_shadow = true;
                                         }
                                         else
                                         {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
+                                            paladinAura_retribution = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (!paladinBlessing_kings)
+                                        {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+                                            paladinBlessing_kings = true;
+                                        }
+                                        else if (!paladinBlessing_wisdom)
+                                        {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
+                                            paladinBlessing_wisdom = true;
+                                        }
+                                        else if (!paladinBlessing_might)
+                                        {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
+                                            paladinBlessing_might = true;
+                                        }
+                                        else
+                                        {
+                                            sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+                                            paladinBlessing_kings = true;
+                                        }
+
+                                        if (!paladinAura_concentration)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
+                                            paladinAura_concentration = true;
+                                        }
+                                        else if (!paladinAura_devotion)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
+                                            paladinAura_devotion = true;
+                                        }
+                                        else if (!paladinAura_retribution)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
+                                            paladinAura_retribution = true;
+                                        }
+                                        else if (!paladinAura_fire)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
+                                            paladinAura_fire = true;
+                                        }
+                                        else if (!paladinAura_frost)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
+                                            paladinAura_frost = true;
+                                        }
+                                        else if (!paladinAura_shadow)
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
                                             paladinAura_shadow = true;
                                         }
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        break;
-                                    }
+                                        else
+                                        {
+                                            sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
+                                            paladinAura_concentration = true;
+                                        }
                                     }
                                 }
                             }
@@ -1332,6 +1287,31 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                     {
                                         sh->aspectType = HunterAspectType::HunterAspectType_Wild;
                                         hunterAspect_wild = true;
+                                    }
+                                }
+                            }
+                            if (member->GetClass() == Classes::CLASS_WARLOCK)
+                            {
+                                if (Script_Warlock* swl = (Script_Warlock*)memberAI->sb)
+                                {
+                                    if (!warlockCurse_Weakness)
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
+                                        warlockCurse_Weakness = true;
+                                    }
+                                    else if (!warlockCurse_Tongues)
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Tongues;
+                                        warlockCurse_Tongues = true;
+                                    }
+                                    else if (!warlockCurse_Element)
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Element;
+                                        warlockCurse_Element = true;
+                                    }
+                                    else
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Agony;
                                     }
                                 }
                             }
@@ -1474,7 +1454,7 @@ void RobotManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                 }
                 else
                 {
-                    int robotCount = 10;
+                    uint32 robotCount = 10;
                     if (commandVector.size() > 2)
                     {
                         robotCount = atoi(commandVector.at(2).c_str());
@@ -1700,9 +1680,11 @@ void RobotManager::HandlePacket(WorldSession* pmSession, WorldPacket pmPacket)
                 {
                     if (me->IsResurrectRequested())
                     {
-                        me->ResurrectUsingRequestData();
+                        me->ClearInCombat();
+                        me->GetThreatManager().ClearAllThreat();
                         robotAI->sb->rm->ResetMovement();
                         robotAI->sb->ClearTarget();
+                        me->ResurrectUsingRequestData();
                     }
                     break;
                 }
@@ -1957,13 +1939,27 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                             {
                                 if (pmReceiver->GetDistance(pmSender) < ATTACK_RANGE_LIMIT)
                                 {
+                                    if (pmReceiver->IsNonMeleeSpellCast(false))
+                                    {
+                                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                                    }
                                     pmReceiver->GetMotionMaster()->Clear();
                                     pmReceiver->StopMoving();
                                     receiverAI->eatDelay = 0;
                                     receiverAI->drinkDelay = 0;
                                     receiverAI->sb->rm->MovePosition(pmSender->GetPosition());
-                                    replyStream << "We are close, I will move to you";
-                                    receiverAI->moveDelay = 3000;
+                                    receiverAI->moveDelay = 1000;
+                                    if (commandVector.size() > 1)
+                                    {
+                                        std::string moveDelayStr = commandVector.at(1);
+                                        int moveDelay = atoi(moveDelayStr.c_str());
+                                        if (moveDelay > 1000 && moveDelay < 6000)
+                                        {
+                                            receiverAI->moveDelay = moveDelay;
+                                        }
+                                    }
+                                    replyStream << "We are close, I will move to you in " << receiverAI->moveDelay << " ms";
                                 }
                                 else
                                 {
@@ -2219,6 +2215,35 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                         else
                         {
                             replyStream << "AOE is off";
+                        }
+                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                    }
+                    else if (commandName == "mark")
+                    {
+                        std::ostringstream replyStream;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string markCMD = commandVector.at(1);
+                            if (markCMD == "on")
+                            {
+                                receiverAI->mark = true;
+                            }
+                            else if (markCMD == "off")
+                            {
+                                receiverAI->mark = false;
+                            }
+                            else
+                            {
+                                replyStream << "Unknown state";
+                            }
+                        }
+                        if (receiverAI->mark)
+                        {
+                            replyStream << "Mark is on";
+                        }
+                        else
+                        {
+                            replyStream << "Mark is off";
                         }
                         WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
                     }
@@ -2614,6 +2639,81 @@ void RobotManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player
                             WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
                         }
                     }
+                    else if (commandName == "prepare")
+                    {
+                        sRobotManager->PrepareRobot(pmReceiver);
+                    }
+                    else if (commandName == "wlc")
+                    {
+                        if (pmReceiver->GetClass() == Classes::CLASS_WARLOCK)
+                        {
+                            std::ostringstream replyStream;
+                            if (Script_Warlock* swl = (Script_Warlock*)receiverAI->sb)
+                            {
+                                if (commandVector.size() > 1)
+                                {
+                                    std::string curseName = commandVector.at(1);
+                                    if (curseName == "none")
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_None;
+                                    }
+                                    else if (curseName == "element")
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Element;
+                                    }
+                                    else if (curseName == "agony")
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Agony;
+                                    }
+                                    else if (curseName == "weakness")
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
+                                    }
+                                    else if (curseName == "tongues")
+                                    {
+                                        swl->curseType = WarlockCurseType::WarlockCurseType_Tongues;
+                                    }
+                                    else
+                                    {
+                                        replyStream << "Unknown type";
+                                    }
+                                }
+                                switch (swl->curseType)
+                                {
+                                case WarlockCurseType::WarlockCurseType_None:
+                                {
+                                    replyStream << "none";
+                                    break;
+                                }
+                                case WarlockCurseType::WarlockCurseType_Element:
+                                {
+                                    replyStream << "element";
+                                    break;
+                                }
+                                case WarlockCurseType::WarlockCurseType_Agony:
+                                {
+                                    replyStream << "agony";
+                                    break;
+                                }
+                                case WarlockCurseType::WarlockCurseType_Weakness:
+                                {
+                                    replyStream << "weakness";
+                                    break;
+                                }
+                                case WarlockCurseType::WarlockCurseType_Tongues:
+                                {
+                                    replyStream << "tongues";
+                                    break;
+                                }
+                                default:
+                                {
+                                    break;
+                                }
+                                }
+                            }
+                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
+                        }
+                    }
 #pragma endregion
                 }
             }
@@ -2747,7 +2847,7 @@ void RobotManager::LearnPlayerTalents(Player* pmTargetPlayer)
         else if (pmTargetPlayer->GetClass() == Classes::CLASS_PALADIN)
         {
             specialty = urand(0, 100);
-            if (specialty < 35)
+            if (specialty < 50)
             {
                 specialty = 0;
             }
@@ -2783,6 +2883,121 @@ void RobotManager::LearnPlayerTalents(Player* pmTargetPlayer)
                     continue;
                 }
                 talentsMap[talentInfo->TierID].push_back(talentInfo);
+            }
+        }
+        if (pmTargetPlayer->GetClass() == Classes::CLASS_WARLOCK)
+        {
+            for (std::map<uint32, std::vector<TalentEntry const*> >::iterator i = talentsMap.begin(); i != talentsMap.end(); ++i)
+            {
+                std::vector<TalentEntry const*> eachRowTalents = i->second;
+                if (eachRowTalents.empty())
+                {
+                    sLog->outMessage("lfm", LogLevel::LOG_LEVEL_ERROR, "%s: No spells for talent row %d", pmTargetPlayer->GetName(), i->first);
+                    continue;
+                }
+                for (std::vector<TalentEntry const*>::iterator it = eachRowTalents.begin(); it != eachRowTalents.end(); it++)
+                {
+                    freePoints = pmTargetPlayer->GetFreeTalentPoints();
+                    if (freePoints > 0)
+                    {
+                        if (const TalentEntry* eachTE = *it)
+                        {
+                            if (warlock2TalentRank0Set.find(eachTE->SpellRank[0]) == warlock2TalentRank0Set.end())
+                            {
+                                continue;
+                            }
+                            uint8 maxRank = 4;
+                            if (eachTE->SpellRank[4] > 0)
+                            {
+                                maxRank = 4;
+                            }
+                            else if (eachTE->SpellRank[3] > 0)
+                            {
+                                maxRank = 3;
+                            }
+                            else if (eachTE->SpellRank[2] > 0)
+                            {
+                                maxRank = 2;
+                            }
+                            else if (eachTE->SpellRank[1] > 0)
+                            {
+                                maxRank = 1;
+                            }
+                            else
+                            {
+                                maxRank = 0;
+                            }
+                            if (maxRank > freePoints - 1)
+                            {
+                                maxRank = freePoints - 1;
+                            }
+                            pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        else if (pmTargetPlayer->GetClass() == Classes::CLASS_PALADIN)
+        {
+            if (specialty == 2)
+            {
+                for (std::map<uint32, std::vector<TalentEntry const*> >::iterator i = talentsMap.begin(); i != talentsMap.end(); ++i)
+                {
+                    std::vector<TalentEntry const*> eachRowTalents = i->second;
+                    if (eachRowTalents.empty())
+                    {
+                        sLog->outMessage("lfm", LogLevel::LOG_LEVEL_ERROR, "%s: No spells for talent row %d", pmTargetPlayer->GetName(), i->first);
+                        continue;
+                    }
+                    for (std::vector<TalentEntry const*>::iterator it = eachRowTalents.begin(); it != eachRowTalents.end(); it++)
+                    {
+                        freePoints = pmTargetPlayer->GetFreeTalentPoints();
+                        if (freePoints > 0)
+                        {
+                            if (const TalentEntry* eachTE = *it)
+                            {
+                                if (paladin2TalentRank0Set.find(eachTE->SpellRank[0]) == paladin2TalentRank0Set.end())
+                                {
+                                    continue;
+                                }
+                                uint8 maxRank = 4;
+                                if (eachTE->SpellRank[4] > 0)
+                                {
+                                    maxRank = 4;
+                                }
+                                else if (eachTE->SpellRank[3] > 0)
+                                {
+                                    maxRank = 3;
+                                }
+                                else if (eachTE->SpellRank[2] > 0)
+                                {
+                                    maxRank = 2;
+                                }
+                                else if (eachTE->SpellRank[1] > 0)
+                                {
+                                    maxRank = 1;
+                                }
+                                else
+                                {
+                                    maxRank = 0;
+                                }
+                                if (maxRank > freePoints - 1)
+                                {
+                                    maxRank = freePoints - 1;
+                                }
+                                pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
             }
         }
         for (std::map<uint32, std::vector<TalentEntry const*> >::iterator i = talentsMap.begin(); i != talentsMap.end(); ++i)
@@ -3007,12 +3222,129 @@ bool RobotManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetLe
         resetEquipments = true;
     }
     InitializeEquipments(pmTargetPlayer, resetEquipments);
-
+    uint32 characterMaxTalentTab = pmTargetPlayer->GetMaxTalentCountTab();
+    switch (pmTargetPlayer->GetClass())
+    {
+    case Classes::CLASS_WARLOCK:
+    {
+        switch (characterMaxTalentTab)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            break;
+        }
+        case 2:
+        {
+            uint32 g0 = pmTargetPlayer->GetGlyph(0);
+            if (g0 == 0)
+            {
+                ApplyGlyph(pmTargetPlayer, 56270, 0);
+                //pmTargetPlayer->CastSpell(pmTargetPlayer, 56270);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        break;
+    }
+    case Classes::CLASS_PALADIN:
+    {
+        switch (characterMaxTalentTab)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            break;
+        }
+        case 2:
+        {
+            // Glyph of Exorcism
+            uint32 g0 = pmTargetPlayer->GetGlyph(0);
+            if (g0 == 0)
+            {
+                ApplyGlyph(pmTargetPlayer, 55118, 0);
+            }
+            // Glyph of Hammer of Wrath
+            uint32 g3 = pmTargetPlayer->GetGlyph(3);
+            if (g3 == 0)
+            {
+                ApplyGlyph(pmTargetPlayer, 55112, 3);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
     std::ostringstream msgStream;
     msgStream << pmTargetPlayer->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
 
     return isNew;
+}
+
+bool RobotManager::ApplyGlyph(Player* pmTargetPlayer, uint32 pmGlyphSpellID, uint32 pmSlot)
+{
+    if (!pmTargetPlayer)
+    {
+        return false;
+    }
+    uint32 g = pmTargetPlayer->GetGlyph(pmSlot);
+    if (g == 0)
+    {
+        if (const SpellInfo* pSI = sSpellMgr->GetSpellInfo(pmGlyphSpellID))
+        {
+            if (uint32 glyph = pSI->Effects[0].MiscValue)
+            {
+                if (GlyphPropertiesEntry const* gp = sGlyphPropertiesStore.LookupEntry(glyph))
+                {
+                    if (GlyphSlotEntry const* gs = sGlyphSlotStore.LookupEntry(pmTargetPlayer->GetGlyphSlot(pmSlot)))
+                    {
+                        if (gp->GlyphSlotFlags != gs->Type)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // remove old glyph
+                    if (uint32 oldglyph = pmTargetPlayer->GetGlyph(pmSlot))
+                    {
+                        if (GlyphPropertiesEntry const* old_gp = sGlyphPropertiesStore.LookupEntry(oldglyph))
+                        {
+                            pmTargetPlayer->RemoveAurasDueToSpell(old_gp->SpellID);
+                            pmTargetPlayer->SetGlyph(pmSlot, 0);
+                        }
+                    }
+
+                    pmTargetPlayer->CastSpell(pmTargetPlayer, gp->SpellID, true);
+                    pmTargetPlayer->SetGlyph(pmSlot, glyph);
+                    pmTargetPlayer->SendTalentsInfoData(false);
+
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 void RobotManager::InitializeEquipments(Player* pmTargetPlayer, bool pmReset)

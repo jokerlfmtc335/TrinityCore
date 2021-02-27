@@ -966,6 +966,10 @@ class spell_dk_death_grip : public SpellScriptLoader
                     {
                         target->CastSpell(GetExplTargetDest()->GetPosition(), GetEffectValue(), true);
                         target->InterruptNonMeleeSpells(false);
+                        if (Unit* caster = GetCaster())
+                        {
+                            caster->CastSpell(target, 49560);
+                        }
                     }
                 }
             }

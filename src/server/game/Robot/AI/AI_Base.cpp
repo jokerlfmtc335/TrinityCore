@@ -22,10 +22,22 @@ AI_Base::AI_Base(Player* pmMe)
     me = pmMe;
     groupRole = GroupRole::GroupRole_DPS;
     engageTarget = NULL;
+    reviveDelay = 0;
+    engageDelay = 0;
+    moveDelay = 0;
+    combatTime = 0;
+    teleportAssembleDelay = 0;
     eatDelay = 0;
     drinkDelay = 0;
-    engageDelay = 0;
-    reviveDelay = 0;
+    readyCheckDelay = 0;
+    staying = false;
+    holding = false;
+    following = true;
+    cure = true;
+    aoe = true;
+    mark = true;
+    dpsDelay = sRobotConfig->DPSDelay;
+    followDistance = FOLLOW_NORMAL_DISTANCE;
     switch (me->GetClass())
     {
     case Classes::CLASS_WARRIOR:
@@ -95,9 +107,7 @@ void AI_Base::Reset()
     following = true;
     cure = true;
     aoe = true;
-    moveDelay = 0;
-    actionType = 0;
-    actionDelay = 0;
+    mark = true;
     dpsDelay = sRobotConfig->DPSDelay;
     followDistance = FOLLOW_NORMAL_DISTANCE;
     uint32 maxTalentCountTab = me->GetMaxTalentCountTab();
@@ -218,11 +228,6 @@ void AI_Base::Update(uint32 pmDiff)
                         }
                     }
                 }
-                if (moveDelay > 0)
-                {
-                    moveDelay -= pmDiff;
-                    return;
-                }
                 if (teleportAssembleDelay > 0)
                 {
                     teleportAssembleDelay -= pmDiff;
@@ -253,14 +258,15 @@ void AI_Base::Update(uint32 pmDiff)
                             {
                                 if (leaderPlayer->IsInWorld())
                                 {
+                                    me->GetThreatManager().ClearAllThreat();
+                                    me->ClearInCombat();
+                                    sb->ClearTarget();
+                                    sb->rm->ResetMovement();
                                     if (!me->IsAlive())
                                     {
                                         me->ResurrectPlayer(0.2f);
                                         me->SpawnCorpseBones();
                                     }
-                                    me->GetThreatManager().ClearAllThreat();
-                                    me->ClearInCombat();
-                                    sb->ClearTarget();
                                     if (me->TeleportTo(leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ(), leaderPlayer->GetOrientation()))
                                     {
                                         sRobotManager->WhisperTo(leaderPlayer, "I have come", Language::LANG_UNIVERSAL, me);
@@ -282,6 +288,15 @@ void AI_Base::Update(uint32 pmDiff)
                             }
                         }
                     }
+                }
+                if (moveDelay > 0)
+                {
+                    moveDelay -= pmDiff;
+                    if (moveDelay < 0)
+                    {
+                        moveDelay = 0;
+                    }
+                    return;
                 }
                 if (reviveDelay > 0)
                 {
@@ -569,12 +584,44 @@ bool AI_Base::DPS()
         }
         if (Group* myGroup = me->GetGroup())
         {
-            // icon only 
-            if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
+            if (mark)
             {
-                if (sb->DPS(target, Chasing(), aoe))
+                // icon  
+                if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
                 {
-                    return true;
+                    if (sb->DPS(target, Chasing(), aoe))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                // tank target
+                Player* mainTank = NULL;
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (AI_Base* memberAI = member->robotAI)
+                        {
+                            if (memberAI->groupRole == GroupRole::GroupRole_Tank)
+                            {
+                                mainTank = member;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (mainTank)
+                {
+                    if (Unit* tankTarget = mainTank->GetSelectedUnit())
+                    {
+                        if (sb->DPS(tankTarget, Chasing(), aoe))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
         }

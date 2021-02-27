@@ -54,14 +54,9 @@ public:
     bool following;
     bool cure;
     bool aoe;
-    uint32 paladinAura;
-    bool marked;
-    Position markPos;
-    Position basePos;
-    int moveDelay;
-    uint32 actionType;
-    int actionDelay;
+    bool mark;
     int assistDelay;
     int reviveDelay;
+    int moveDelay;
 };
 #endif
